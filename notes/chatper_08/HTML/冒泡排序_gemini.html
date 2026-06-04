@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>冒泡排序可视化</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 彻底消除页面的水平滚动条 */
+        html, body {
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        /* 隐藏指定容器的滚动条，但保留滚动功能 */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* 基础过渡 */
+        .item-transition { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* 状态样式定义 */
+        .state-current {
+            transform: translateY(-15px) scale(1.05);
+            box-shadow: 0 10px 20px -5px rgba(14, 165, 233, 0.4);
+            z-index: 20;
+        }
+        .state-comparing {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+            z-index: 10;
+            border-width: 3px !important;
+        }
+
+        /* 自定义动画：双向交换指示 */
+        @keyframes swap-pulse {
+            0%, 100% { transform: translate(50%, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(50%, -50%) scale(1.2); opacity: 1; }
+        }
+        .animate-swap-pulse { animation: swap-pulse 1s infinite; }
+
+        @keyframes bounce-up {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -10px); }
+        }
+        .animate-bounce-up { animation: bounce-up 1s infinite; }
+
+        /* 代码高亮相关样式 */
+        .code-line {
+            padding: 2px 12px;
+            margin: 2px 0;
+            border-left: 3px solid transparent;
+            border-radius: 0 4px 4px 0;
+            transition: all 0.2s ease;
+            white-space: pre-wrap; /* 修改为 pre-wrap 允许过长代码换行 */
+            word-wrap: break-word;
+        }
+        .code-line.active {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-left-color: #10b981;
+            color: #fff;
+            text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center py-8 px-2 sm:px-4 font-sans selection:bg-sky-200 overflow-x-hidden">
+
+    <div class="text-center mb-8 px-2">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mb-2">冒泡排序可视化 <span class="text-sky-500">水落石出</span></h1>
+        <p class="text-slate-500 text-xs sm:text-sm max-w-2xl mx-auto">
+            红色的 <span class="bg-rose-100 text-rose-700 px-1 rounded font-bold">49*</span> 用于验证稳定性。大元素像水底的气泡一样逐步“浮”到数组的右端。
+        </p>
+    </div>
+
+    <div class="flex flex-col lg:flex-row gap-6 w-full max-w-[1450px]">
+        
+        <div class="flex-1 bg-white rounded-3xl shadow-2xl shadow-slate-200/50 p-4 sm:p-6 md:p-10 border border-slate-50 relative overflow-hidden flex flex-col justify-between">
+            <div class="absolute top-0 left-0 -mt-10 -ml-10 w-40 h-40 bg-sky-100 rounded-full opacity-50 blur-3xl pointer-events-none"></div>
+            <div class="absolute bottom-0 right-0 -mb-10 -mr-10 w-40 h-40 bg-emerald-100 rounded-full opacity-50 blur-3xl pointer-events-none"></div>
+
+            <div class="z-10 relative w-full">
+                <!-- 信息面板 -->
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4 sm:gap-6 mb-8 sm:mb-10 bg-slate-50/80 backdrop-blur-sm rounded-2xl p-4 sm:p-5 border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <span class="text-slate-500 font-bold text-xs sm:text-sm uppercase tracking-wider">当前进度</span>
+                        <span id="step-counter" class="bg-white text-slate-700 py-1 px-4 rounded-full text-xs sm:text-sm font-extrabold shadow-sm border border-slate-200">0 / 0</span>
+                    </div>
+
+                    <div class="flex items-center gap-3">
+                        <span class="text-slate-500 font-bold text-xs sm:text-sm uppercase tracking-wider">本趟交换标志 (Flag)</span>
+                        <div id="flag-box" class="w-16 h-10 sm:w-20 sm:h-12 flex items-center justify-center bg-slate-100 border-2 border-slate-300 text-slate-500 rounded-xl font-bold text-base sm:text-lg shadow-sm item-transition">
+                            False
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数组可视化容器：修改了 gap 和响应式间距以适应小屏幕 -->
+                <div class="flex justify-center items-end gap-1.5 sm:gap-3 md:gap-4 min-h-[120px] sm:min-h-[160px] mb-8 pt-10 pb-8 relative w-full max-w-full" id="array-container">
+                    <!-- 动态渲染 -->
+                </div>
+
+                <!-- 讲解提示框 -->
+                <div class="bg-sky-50/80 backdrop-blur-sm border-l-4 border-sky-500 p-4 sm:p-6 rounded-r-2xl mb-6 min-h-[90px] sm:min-h-[110px] flex items-center shadow-sm">
+                    <div class="mr-3 sm:mr-4 text-sky-500 text-xl sm:text-2xl"><i class="fa-solid fa-water"></i></div>
+                    <p id="message-box" class="text-sky-900 text-sm sm:text-base leading-relaxed m-0 font-medium">
+                        点击“下一步”或“播放”开始演示冒泡排序。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-6 border-t border-slate-100 pt-6 z-10 relative mt-auto">
+                <button onclick="init()" class="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all active:scale-95 text-sm sm:text-base">
+                    <i class="fa-solid fa-rotate-left"></i> 重置
+                </button>
+                <button id="btn-prev" onclick="prevStep()" class="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-sky-50 text-sky-700 font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-sky-200 active:scale-95 text-sm sm:text-base">
+                    <i class="fa-solid fa-chevron-left"></i> 上一步
+                </button>
+                <button id="btn-play" onclick="togglePlay()" class="flex items-center gap-2 px-6 sm:px-8 py-2 sm:py-2.5 bg-sky-500 hover:bg-sky-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-sky-500/30 w-32 sm:w-40 justify-center active:scale-95 text-sm sm:text-base">
+                    <i id="play-icon" class="fa-solid fa-play"></i> <span id="play-text">自动播放</span>
+                </button>
+                <button id="btn-next" onclick="nextStep()" class="flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-white hover:bg-sky-50 text-sky-700 font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-sky-200 active:scale-95 text-sm sm:text-base">
+                    下一步 <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 右侧：代码展示区 -->
+        <div class="w-full lg:w-[450px] xl:w-[500px] bg-[#1e293b] rounded-3xl shadow-2xl p-4 sm:p-6 border border-slate-700 flex flex-col z-10 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-slate-700 rounded-full opacity-20 blur-3xl pointer-events-none"></div>
+            <h3 class="text-slate-200 font-bold mb-4 flex items-center gap-2 text-base sm:text-lg relative z-10"><i class="fa-solid fa-code text-sky-400"></i> 教材C语言实现 (冒泡排序)</h3>
+            <!-- 移除 overflow-x-auto，添加 hide-scrollbar 类 -->
+            <div class="bg-[#0f172a] rounded-xl p-4 sm:p-5 flex-1 overflow-y-auto hide-scrollbar font-mono text-xs sm:text-[13px] leading-[2.1] text-slate-400 shadow-inner border border-slate-800/50 relative z-10">
+                <div id="code-line-1" class="code-line"><span class="text-pink-400">void</span> <span class="text-blue-400">BubbleSort</span>(<span class="text-emerald-400">ElemType</span> A[], <span class="text-pink-400">int</span> n){</div>
+                <div id="code-line-2" class="code-line">    <span class="text-pink-400">int</span> i, j;</div>
+                <div id="code-line-3" class="code-line">    <span class="text-pink-400">bool</span> flag;</div>
+                <div id="code-line-4" class="code-line">    <span class="text-pink-400">for</span>(i=<span class="text-orange-400">0</span>; i&lt;n-<span class="text-orange-400">1</span>; i++){           <span class="text-slate-500 italic">// 进行 n-1 趟冒泡</span></div>
+                <div id="code-line-5" class="code-line">        flag = <span class="text-orange-400">false</span>;               <span class="text-slate-500 italic">// 表示本趟是否发生交换</span></div>
+                <div id="code-line-6" class="code-line">        <span class="text-pink-400">for</span>(j=<span class="text-orange-400">0</span>; j&lt;n-i-<span class="text-orange-400">1</span>; j++){       <span class="text-slate-500 italic">// 一趟冒泡过程</span></div>
+                <div id="code-line-7" class="code-line">            <span class="text-pink-400">if</span>(A[j] &gt; A[j+<span class="text-orange-400">1</span>]){        <span class="text-slate-500 italic">// 若逆序</span></div>
+                <div id="code-line-8" class="code-line">                <span class="text-blue-400">swap</span>(A[j], A[j+<span class="text-orange-400">1</span>]);  <span class="text-slate-500 italic">// 交换元素</span></div>
+                <div id="code-line-9" class="code-line">                flag = <span class="text-orange-400">true</span>;          <span class="text-slate-500 italic">// 标记发生交换</span></div>
+                <div id="code-line-10" class="code-line">            }</div>
+                <div id="code-line-11" class="code-line">        }</div>
+                <div id="code-line-12" class="code-line">        <span class="text-pink-400">if</span>(flag == <span class="text-orange-400">false</span>)           <span class="text-slate-500 italic">// 若本趟未交换</span></div>
+                <div id="code-line-13" class="code-line">            <span class="text-pink-400">return</span>;                 <span class="text-slate-500 italic">// 说明表已经有序，提前结束</span></div>
+                <div id="code-line-14" class="code-line">    }</div>
+                <div id="code-line-15" class="code-line">}</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 图例 -->
+    <div class="flex flex-wrap justify-center gap-x-4 sm:gap-x-6 gap-y-2 sm:gap-y-3 mt-6 text-xs sm:text-sm font-medium text-slate-600 bg-white py-2 sm:py-3 px-4 sm:px-6 rounded-full shadow-sm border border-slate-100 max-w-4xl mx-auto">
+        <div class="flex items-center gap-1 sm:gap-2"><div class="w-3 h-3 sm:w-4 sm:h-4 rounded bg-emerald-100 border border-emerald-400"></div>已完成排序区</div>
+        <div class="flex items-center gap-1 sm:gap-2"><div class="w-3 h-3 sm:w-4 sm:h-4 rounded bg-amber-100 border-2 border-amber-500"></div>正在比较相邻元素</div>
+        <div class="flex items-center gap-1 sm:gap-2"><div class="w-3 h-3 sm:w-4 sm:h-4 rounded bg-sky-50 border border-sky-300"></div><i class="fa-solid fa-right-left text-sky-500"></i> 发生交换</div>
+    </div>
+
+    <script>
+        const initialArray = [49, 38, 65, 97, 76, 13, 27, '49*'];
+        let states = []; 
+        let currentStep = 0;
+        let playInterval = null;
+        let isPlaying = false;
+
+        function generateStates() {
+            states = [];
+            let arr = [...initialArray];
+            let n = arr.length;
+
+            states.push({
+                arr: [...arr], sortedBound: n, compareIdx1: -1, compareIdx2: -1, swappedIdx1: -1, swappedIdx2: -1, flag: false, codeLine: 1,
+                msg: "<b>初始状态：</b>数组长度 n=8。准备进行冒泡排序。"
+            });
+
+            for (let i = 0; i < n - 1; i++) {
+                let flag = false;
+                
+                states.push({
+                    arr: [...arr], sortedBound: n - i, compareIdx1: -1, compareIdx2: -1, swappedIdx1: -1, swappedIdx2: -1, flag: flag, codeLine: 5,
+                    msg: `<b>第 ${i + 1} 趟冒泡：</b>重置交换标志 <b>Flag = False</b>。<br>本趟目标是将无序区里的最大值像气泡一样“浮”到右侧。`
+                });
+
+                for (let j = 0; j < n - i - 1; j++) {
+                    let val1 = typeof arr[j] === 'string' ? parseInt(arr[j].replace('*', '')) : arr[j];
+                    let val2 = typeof arr[j+1] === 'string' ? parseInt(arr[j+1].replace('*', '')) : arr[j+1];
+
+                    // 比较状态
+                    states.push({
+                        arr: [...arr], sortedBound: n - i, compareIdx1: j, compareIdx2: j+1, swappedIdx1: -1, swappedIdx2: -1, flag: flag, codeLine: 7,
+                        msg: `<b>比较相邻元素：</b>比较下标为 ${j} 的 <span class='text-amber-600 font-bold'>${arr[j]}</span> 和下标为 ${j+1} 的 <span class='text-amber-600 font-bold'>${arr[j+1]}</span>。`
+                    });
+
+                    if (val1 > val2) {
+                        // 发生交换
+                        let temp = arr[j];
+                        arr[j] = arr[j+1];
+                        arr[j+1] = temp;
+                        flag = true;
+
+                        states.push({
+                            arr: [...arr], sortedBound: n - i, compareIdx1: -1, compareIdx2: -1, swappedIdx1: j, swappedIdx2: j+1, flag: flag, codeLine: 8,
+                            msg: `<b>发生交换：</b>因为 ${val1} > ${val2}，交换两者的位置。<br>并设置 <b>Flag = True</b>。`
+                        });
+                    } else {
+                        // 不交换 (体现稳定性)
+                        let stableMsg = val1 === val2 ? `<br><span class='text-xs text-slate-500'>(注：遇到相等元素不交换位置，这就是冒泡排序保证<b>稳定性</b>的原因)</span>` : '';
+                        states.push({
+                            arr: [...arr], sortedBound: n - i, compareIdx1: j, compareIdx2: j+1, swappedIdx1: -1, swappedIdx2: -1, flag: flag, codeLine: 7,
+                            msg: `<b>不交换：</b>因为 ${val1} &le; ${val2}，位置保持不变。继续向右比对。${stableMsg}`
+                        });
+                    }
+                }
+
+                // 一趟结束，最右侧的一个元素就位
+                states.push({
+                    arr: [...arr], sortedBound: n - i - 1, compareIdx1: -1, compareIdx2: -1, swappedIdx1: -1, swappedIdx2: -1, flag: flag, codeLine: 12,
+                    msg: `<b>本趟结束：</b>当前无序区最大的元素已成功“冒泡”到最右侧，并入绿色有序区。`
+                });
+
+                // 提前退出判断
+                if (!flag) {
+                    states.push({
+                        arr: [...arr], sortedBound: 0, compareIdx1: -1, compareIdx2: -1, swappedIdx1: -1, swappedIdx2: -1, flag: flag, codeLine: 13,
+                        msg: `<b>提前结束：</b>检查到本趟 <b>Flag == False</b>，说明整个遍历过程中没有发生任何交换。这代表数组已经完全有序，提前结束算法！`
+                    });
+                    break;
+                }
+            }
+
+            states.push({
+                arr: [...arr], sortedBound: 0, compareIdx1: -1, compareIdx2: -1, swappedIdx1: -1, swappedIdx2: -1, flag: states[states.length-1].flag, codeLine: 15,
+                msg: "<b>🎉 排序完成！</b> 注意观察 49 和 49* 的相对位置，可以直观看出冒泡排序是一种<b>稳定</b>的排序算法。"
+            });
+        }
+
+        function render() {
+            const state = states[currentStep];
+            const container = document.getElementById('array-container');
+            container.innerHTML = '';
+
+            // 更新 Flag 状态框
+            const flagBox = document.getElementById('flag-box');
+            flagBox.innerHTML = state.flag ? 'True' : 'False';
+            if(state.flag) {
+                flagBox.className = "w-16 h-10 sm:w-24 sm:h-12 flex items-center justify-center bg-rose-500 border-2 border-rose-600 text-white rounded-xl font-bold text-base sm:text-lg shadow-md item-transition";
+            } else {
+                flagBox.className = "w-16 h-10 sm:w-24 sm:h-12 flex items-center justify-center bg-slate-100 border-2 border-slate-300 text-slate-500 rounded-xl font-bold text-base sm:text-lg shadow-sm item-transition";
+            }
+
+            // 代码高亮
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            if (state.codeLine) {
+                const activeLine = document.getElementById(`code-line-${state.codeLine}`);
+                if (activeLine) {
+                    activeLine.classList.add('active');
+                    activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            state.arr.forEach((val, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "relative flex flex-col items-center group";
+
+                const div = document.createElement('div');
+                // 响应式缩小方块尺寸：w-10 h-12 到 md:w-20 md:h-24
+                let classes = "item-transition w-10 h-12 sm:w-14 sm:h-16 md:w-20 md:h-24 flex items-center justify-center text-base sm:text-xl md:text-2xl font-bold rounded-xl md:rounded-2xl border-2 md:border-[3px] relative z-10 bg-white border-slate-200 text-slate-500";
+                
+                let innerHtml = val;
+                if (typeof val === 'string' && val.includes('*')) {
+                    innerHtml = val.replace('*', '') + `<span class="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 bg-rose-500 text-white text-[8px] sm:text-[10px] rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center shadow-sm font-bold">*</span>`;
+                }
+
+                let addonHtml = '';
+
+                // 根据状态覆写样式
+                if (index >= state.sortedBound) {
+                    // 已排好序的元素 (冒泡到右侧)
+                    classes = classes.replace('bg-white border-slate-200 text-slate-500', '');
+                    classes += " bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm";
+                } else if (index === state.compareIdx1 || index === state.compareIdx2) {
+                    // 正在进行相邻比较的两个元素
+                    classes = classes.replace('bg-white border-slate-200 text-slate-500', '');
+                    classes += " bg-amber-50 border-amber-500 text-amber-600 state-comparing";
+                    // 给左边的元素头顶加个连接指示图标
+                    if (index === state.compareIdx1) {
+                        addonHtml = `<div class="absolute -top-8 sm:-top-10 left-1/2 translate-x-[20%] text-amber-500 text-lg sm:text-2xl z-20 w-full flex justify-center"><i class="fa-solid fa-code-compare"></i></div>`;
+                    }
+                } else if (index === state.swappedIdx1 || index === state.swappedIdx2) {
+                    // 刚刚发生交换的两个元素
+                    classes = classes.replace('bg-white border-slate-200 text-slate-500', '');
+                    classes += " bg-sky-50 border-sky-400 text-sky-600 state-current";
+                    // 在两者中间渲染一个双向交换箭头
+                    if (index === state.swappedIdx1) {
+                        // 使用绝对定位将箭头放在两个盒子正中间
+                        addonHtml = `<div class="absolute top-1/2 -right-3 sm:-right-4 translate-x-1/2 -translate-y-1/2 text-sky-500 text-lg sm:text-2xl z-30 animate-swap-pulse"><i class="fa-solid fa-right-left"></i></div>`;
+                    }
+                }
+
+                div.className = classes;
+                div.innerHTML = innerHtml + addonHtml;
+                wrapper.appendChild(div);
+                container.appendChild(wrapper);
+            });
+
+            document.getElementById('message-box').innerHTML = state.msg;
+            document.getElementById('step-counter').innerText = `${currentStep} / ${states.length - 1}`;
+            document.getElementById('btn-prev').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === states.length - 1;
+            
+            if (currentStep === states.length - 1 && isPlaying) pause();
+        }
+
+        function nextStep() { if (currentStep < states.length - 1) { currentStep++; render(); } }
+        function prevStep() { if (currentStep > 0) { currentStep--; render(); } }
+        function togglePlay() { isPlaying ? pause() : play(); }
+
+        function play() {
+            if (currentStep >= states.length - 1) currentStep = 0; 
+            isPlaying = true;
+            document.getElementById('play-icon').className = "fa-solid fa-pause";
+            document.getElementById('play-text').innerText = "暂停播放";
+            const btnPlay = document.getElementById('btn-play');
+            btnPlay.className = btnPlay.className.replace('bg-sky-500 hover:bg-sky-600 shadow-sky-500/30', 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30');
+            
+            nextStep();
+            playInterval = setInterval(nextStep, 1500); 
+        }
+
+        function pause() {
+            isPlaying = false;
+            clearInterval(playInterval);
+            document.getElementById('play-icon').className = "fa-solid fa-play";
+            document.getElementById('play-text').innerText = "自动播放";
+            const btnPlay = document.getElementById('btn-play');
+            btnPlay.className = btnPlay.className.replace('bg-amber-500 hover:bg-amber-600 shadow-amber-500/30', 'bg-sky-500 hover:bg-sky-600 shadow-sky-500/30');
+        }
+
+        function init() { pause(); generateStates(); currentStep = 0; render(); }
+        window.onload = init;
+    </script>
+</body>
+</html>

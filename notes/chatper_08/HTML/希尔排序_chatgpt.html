@@ -1,0 +1,589 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>希尔排序可视化交互演示</title>
+<style>
+  :root{
+    --bg:#f7f8fc;
+    --panel:#ffffff;
+    --ink:#182033;
+    --muted:#657187;
+    --line:#e8ebf3;
+    --primary:#4f6df5;
+    --primary2:#7c4dff;
+    --soft:#eef2ff;
+    --green:#17a673;
+    --orange:#ff8a3d;
+    --red:#ef476f;
+    --blue:#00a3ff;
+    --shadow:0 18px 45px rgba(33,43,78,.10);
+    --radius:24px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(79,109,245,.16), transparent 32vw),
+      radial-gradient(circle at 90% 5%, rgba(124,77,255,.14), transparent 28vw),
+      var(--bg);
+    color:var(--ink);
+  }
+  .page{
+    width:min(1280px, calc(100% - 28px));
+    margin:24px auto 42px;
+  }
+  .hero{
+    display:grid;
+    grid-template-columns:1.05fr .95fr;
+    gap:18px;
+    align-items:stretch;
+  }
+  .title-card,.quick-card,.demo-card,.code-card{
+    background:rgba(255,255,255,.88);
+    border:1px solid rgba(232,235,243,.95);
+    box-shadow:var(--shadow);
+    border-radius:var(--radius);
+  }
+  .title-card{padding:28px 30px; position:relative; overflow:hidden;}
+  .title-card:after{
+    content:""; position:absolute; right:-70px; top:-70px; width:210px; height:210px;
+    background:linear-gradient(135deg, rgba(79,109,245,.18), rgba(124,77,255,.08)); border-radius:50%;
+  }
+  .eyebrow{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:7px 12px; border-radius:999px;
+    background:var(--soft); color:#4056ca; font-weight:700; font-size:13px;
+  }
+  h1{margin:16px 0 10px; font-size:clamp(30px,4vw,52px); letter-spacing:-.04em; line-height:1.05;}
+  .lead{margin:0; color:var(--muted); font-size:17px; line-height:1.75; max-width:780px;}
+  .lead strong{color:var(--ink)}
+  .quick-card{padding:22px; display:grid; gap:12px;}
+  .quick-card h2{margin:0 0 2px; font-size:20px;}
+  .point{display:flex; gap:12px; align-items:flex-start; padding:12px 12px; border-radius:18px; background:#fbfcff; border:1px solid var(--line);}
+  .num{flex:0 0 auto; width:28px; height:28px; display:grid; place-items:center; border-radius:10px; background:#eff3ff; color:#435be7; font-weight:800;}
+  .point b{display:block; margin-bottom:3px;}
+  .point span{color:var(--muted); font-size:14px; line-height:1.55;}
+  .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
+  .chip{font-size:13px; font-weight:700; color:#31405c; background:#f3f6fb; border:1px solid var(--line); padding:7px 10px; border-radius:999px;}
+  .demo-card{margin-top:18px; padding:22px; overflow:hidden;}
+  .demo-head{display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:14px;}
+  .demo-head h2{margin:0 0 6px; font-size:24px; letter-spacing:-.02em;}
+  .demo-head p{margin:0; color:var(--muted); line-height:1.6;}
+  .stat-bar{display:flex; flex-wrap:wrap; gap:9px; justify-content:flex-end; min-width:280px;}
+  .stat{padding:10px 12px; border-radius:15px; background:#f8faff; border:1px solid var(--line); min-width:92px;}
+  .stat small{display:block; color:var(--muted); font-size:12px; margin-bottom:2px;}
+  .stat strong{font-size:18px;}
+  .workbench{
+    display:grid;
+    grid-template-columns: minmax(0,1fr) 300px;
+    gap:18px;
+    align-items:start;
+  }
+  .visual-wrap{min-width:0;}
+  .array-stage{
+    position:relative;
+    min-height:260px;
+    padding:28px 20px 18px;
+    background:linear-gradient(180deg,#ffffff 0%, #fbfcff 100%);
+    border:1px solid var(--line);
+    border-radius:22px;
+    overflow-x:auto;
+    overflow-y:hidden;
+  }
+  #linkLayer{position:absolute; inset:0; pointer-events:none; overflow:visible; z-index:1;}
+  .array-row{
+    position:relative; z-index:2;
+    display:flex; gap:12px; align-items:flex-end; justify-content:center;
+    min-width:max-content;
+    padding:78px 8px 6px;
+  }
+  .cell{
+    width:70px; min-width:70px; height:132px;
+    border:1px solid #e7ebf6;
+    border-radius:18px;
+    background:#fff;
+    display:flex; flex-direction:column; justify-content:flex-end; align-items:center;
+    padding:9px 8px 8px;
+    box-shadow:0 8px 18px rgba(38,50,91,.06);
+    transition:.28s ease;
+    position:relative;
+  }
+  .cell .idx{position:absolute; top:7px; left:0; right:0; text-align:center; font-size:11px; color:#9aa4b8;}
+  .cell .val{font-size:21px; font-weight:900; letter-spacing:-.03em; margin-bottom:6px;}
+  .bar{
+    width:28px; height:calc(var(--h) * 1px);
+    min-height:10px; max-height:76px;
+    border-radius:999px 999px 8px 8px;
+    background:linear-gradient(180deg,#8ca0ff,#4f6df5);
+    transition:.28s ease;
+  }
+  .cell.group{background:#f5f7ff; border-color:#d9e0ff; transform:translateY(-6px);}
+  .cell.compare{border-color:var(--orange); box-shadow:0 0 0 4px rgba(255,138,61,.14), 0 12px 24px rgba(255,138,61,.14);}
+  .cell.compare .bar{background:linear-gradient(180deg,#ffc08d,#ff8a3d)}
+  .cell.key{border-color:var(--primary); box-shadow:0 0 0 4px rgba(79,109,245,.15), 0 13px 25px rgba(79,109,245,.18); transform:translateY(-12px) scale(1.03);}
+  .cell.key:after{content:"key"; position:absolute; top:-24px; font-size:12px; font-weight:800; color:#4056ca; background:#eef2ff; border:1px solid #dbe2ff; border-radius:999px; padding:3px 8px;}
+  .cell.move{animation:pulse .62s ease both; border-color:var(--green); box-shadow:0 0 0 4px rgba(23,166,115,.12),0 10px 22px rgba(23,166,115,.12);}
+  .cell.move .bar{background:linear-gradient(180deg,#67deb6,#17a673)}
+  .cell.insert{animation:drop .52s ease both; border-color:#7c4dff; box-shadow:0 0 0 4px rgba(124,77,255,.14),0 10px 22px rgba(124,77,255,.12);}
+  .cell.insert .bar{background:linear-gradient(180deg,#ad92ff,#7c4dff)}
+  .cell.done{background:#f7fff9; border-color:#ccefd9;}
+  @keyframes pulse{0%{transform:scale(1)}45%{transform:translateY(-11px) scale(1.05)}100%{transform:scale(1)}}
+  @keyframes drop{0%{transform:translateY(-18px) scale(.98)}100%{transform:translateY(0) scale(1)}}
+  .step-box{margin-top:12px; display:grid; grid-template-columns:1fr; gap:10px;}
+  .message{border-radius:18px; border:1px solid #dfe5ff; background:#f7f9ff; padding:14px 16px; min-height:58px; display:flex; align-items:center; color:#2e3b60; line-height:1.55; font-weight:650;}
+  .track{border-radius:18px; border:1px dashed #d8def1; background:#fff; padding:12px 14px; min-height:54px;}
+  .track-title{font-size:13px; color:var(--muted); margin-bottom:8px;}
+  .subseq{display:flex; flex-wrap:wrap; gap:8px; align-items:center;}
+  .pill{display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:7px 10px; background:#f5f7fb; border:1px solid #e7ebf6; font-weight:800; font-size:14px; color:#34405b;}
+  .pill small{font-size:11px; color:#8c96aa; font-weight:700;}
+  .pill.active{background:#eef2ff; border-color:#cfd8ff; color:#4056ca;}
+  .side-panel{display:grid; gap:12px; min-width:0;}
+  .gap-card,.tip-card{background:#fff; border:1px solid var(--line); border-radius:20px; padding:15px;}
+  .gap-card h3,.tip-card h3{font-size:16px; margin:0 0 10px;}
+  .gap-pills{display:flex; flex-wrap:wrap; gap:8px;}
+  .gap-pill{padding:9px 11px; border-radius:999px; background:#f5f7fb; border:1px solid var(--line); font-weight:900; color:#657187;}
+  .gap-pill.active{background:#eef2ff; border-color:#cfd8ff; color:#4056ca; box-shadow:0 0 0 3px rgba(79,109,245,.10)}
+  .gap-pill.done{background:#f1fbf6; border-color:#cdeedb; color:#11845d;}
+  .tip-card ul{padding-left:18px; margin:0; color:var(--muted); line-height:1.75; font-size:14px;}
+  .controls{
+    margin-top:16px;
+    display:grid;
+    grid-template-columns: minmax(240px, 1fr) auto;
+    gap:14px;
+    align-items:end;
+  }
+  .control-left{display:grid; gap:10px; min-width:0;}
+  .field-row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+  input,select,button{font:inherit}
+  .array-input{
+    flex:1 1 420px;
+    border:1px solid var(--line); border-radius:16px; padding:12px 14px; outline:none; background:#fff; color:var(--ink);
+  }
+  .array-input:focus{border-color:#bac5ff; box-shadow:0 0 0 4px rgba(79,109,245,.12)}
+  select,.custom-gap{border:1px solid var(--line); border-radius:16px; padding:12px 13px; background:#fff; color:#34405b; outline:none;}
+  .custom-gap{width:130px;}
+  .buttons{display:flex; flex-wrap:wrap; gap:9px; justify-content:flex-end;}
+  button{
+    border:0; border-radius:15px; padding:12px 16px; font-weight:850; cursor:pointer;
+    transition:.18s ease; white-space:nowrap;
+  }
+  .primary{color:#fff; background:linear-gradient(135deg,var(--primary),var(--primary2)); box-shadow:0 12px 20px rgba(79,109,245,.20);}
+  .ghost{color:#31405c; background:#fff; border:1px solid var(--line);}
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  .speed{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px;}
+  input[type="range"]{accent-color:var(--primary); width:160px;}
+  .code-card{margin-top:18px; padding:0; overflow:hidden;}
+  details{padding:0;}
+  summary{list-style:none; cursor:pointer; padding:18px 22px; font-weight:900; display:flex; justify-content:space-between; align-items:center;}
+  summary::-webkit-details-marker{display:none}
+  summary:after{content:"展开"; color:#4056ca; font-size:13px; background:#eef2ff; padding:5px 9px; border-radius:999px;}
+  details[open] summary:after{content:"收起";}
+  pre{margin:0; padding:18px 22px 24px; overflow:auto; border-top:1px solid var(--line); background:#101729; color:#ecf2ff; line-height:1.55; font-size:14px;}
+  .legend{display:flex; gap:8px; flex-wrap:wrap; color:var(--muted); font-size:13px; margin-top:10px;}
+  .legend span{display:inline-flex; align-items:center; gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%;background:var(--primary)}
+  .dot.orange{background:var(--orange)} .dot.green{background:var(--green)} .dot.purple{background:var(--primary2)}
+  .toast{display:none; margin-top:10px; padding:10px 12px; border-radius:14px; background:#fff3f3; border:1px solid #ffd5d5; color:#b42318; font-size:14px;}
+  @media (max-width:980px){
+    .hero,.workbench{grid-template-columns:1fr;}
+    .stat-bar{justify-content:flex-start; min-width:0;}
+    .controls{grid-template-columns:1fr;}
+    .buttons{justify-content:flex-start;}
+  }
+  @media (max-width:640px){
+    .page{width:min(100% - 18px,1280px); margin-top:10px;}
+    .title-card,.quick-card,.demo-card{border-radius:20px; padding:18px;}
+    .cell{width:58px; min-width:58px; height:122px;}
+    .array-row{gap:8px; padding-top:72px;}
+    .array-stage{padding-inline:10px;}
+    .demo-head{display:block;}
+    .stat-bar{margin-top:12px;}
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="title-card">
+        <span class="eyebrow">8.2.3 希尔排序 Shell Sort</span>
+        <h1>先“粗排”，再“细排”</h1>
+        <p class="lead">希尔排序是对<strong>直接插入排序</strong>的改进：先按增量 <strong>gap</strong> 把相隔一定距离的元素分成若干组，组内做插入排序；然后逐步缩小 gap，最后 gap=1 时完成整体插入排序。</p>
+        <div class="chips">
+          <span class="chip">空间：O(1)</span>
+          <span class="chip">最坏：O(n²)</span>
+          <span class="chip">不稳定排序</span>
+          <span class="chip">适合基本有序 / 数据量较小</span>
+        </div>
+      </div>
+      <div class="quick-card">
+        <h2>看懂它只抓 3 点</h2>
+        <div class="point"><span class="num">1</span><div><b>gap 分组</b><span>例如 gap=5，则 A[0] 与 A[5] 一组，A[1] 与 A[6] 一组。</span></div></div>
+        <div class="point"><span class="num">2</span><div><b>组内插入排序</b><span>每组都让较小元素向前移动，使序列逐步接近有序。</span></div></div>
+        <div class="point"><span class="num">3</span><div><b>gap 缩小到 1</b><span>最后一趟就是普通插入排序，但此时数据已经比较有序，所以移动次数更少。</span></div></div>
+      </div>
+    </section>
+
+    <section class="demo-card">
+      <div class="demo-head">
+        <div>
+          <h2>交互动画演示</h2>
+          <p>默认使用图中的序列：49, 38, 65, 97, 76, 13, 27, 49, 55, 04。点击“开始”或“单步”观察每次比较、后移和插入。</p>
+        </div>
+        <div class="stat-bar">
+          <div class="stat"><small>当前 gap</small><strong id="statGap">-</strong></div>
+          <div class="stat"><small>比较次数</small><strong id="statCmp">0</strong></div>
+          <div class="stat"><small>移动次数</small><strong id="statMove">0</strong></div>
+        </div>
+      </div>
+
+      <div class="workbench">
+        <div class="visual-wrap">
+          <div class="array-stage" id="stage">
+            <svg id="linkLayer"></svg>
+            <div class="array-row" id="arrayRow"></div>
+          </div>
+          <div class="legend">
+            <span><i class="dot"></i> key：待插入元素</span>
+            <span><i class="dot orange"></i> 比较位置</span>
+            <span><i class="dot green"></i> 后移</span>
+            <span><i class="dot purple"></i> 插入完成</span>
+          </div>
+          <div class="step-box">
+            <div class="message" id="message">准备开始：先选择一个较大的 gap，把相隔 gap 的元素分组。</div>
+            <div class="track">
+              <div class="track-title" id="trackTitle">当前子序列</div>
+              <div class="subseq" id="subseq"></div>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="gap-card">
+            <h3>增量进度</h3>
+            <div class="gap-pills" id="gapPills"></div>
+          </div>
+          <div class="tip-card">
+            <h3>这一页重点</h3>
+            <ul>
+              <li>大 gap：让小元素快速跳到前面。</li>
+              <li>小 gap：继续细调局部顺序。</li>
+              <li>gap=1：完成最终整体排序。</li>
+              <li>相同元素可能跨组交换，所以不稳定。</li>
+            </ul>
+          </div>
+        </aside>
+      </div>
+
+      <div class="controls">
+        <div class="control-left">
+          <div class="field-row">
+            <input class="array-input" id="arrayInput" value="49, 38, 65, 97, 76, 13, 27, 49, 55, 04" aria-label="数组输入" />
+          </div>
+          <div class="field-row">
+            <select id="gapMode" aria-label="增量模式">
+              <option value="book">课本示例：5 → 3 → 1</option>
+              <option value="half">常用减半：n/2 → ... → 1</option>
+              <option value="custom">自定义增量</option>
+            </select>
+            <input class="custom-gap" id="customGaps" value="5,3,1" aria-label="自定义增量" />
+            <label class="speed">速度 <input id="speed" type="range" min="1" max="5" value="3" /> <span id="speedText">3x</span></label>
+          </div>
+          <div class="toast" id="toast"></div>
+        </div>
+        <div class="buttons">
+          <button class="primary" id="playBtn">开始</button>
+          <button class="ghost" id="stepBtn">单步</button>
+          <button class="ghost" id="resetBtn">重置</button>
+          <button class="ghost" id="randomBtn">随机数组</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="code-card">
+      <details>
+        <summary>C 语言实现：指针参数 + 参数检查</summary>
+<pre><code>void ShellSort(int *A, int n) {
+    if (A == NULL || n <= 1) return;
+
+    for (int gap = n / 2; gap > 0; gap /= 2) {
+        for (int i = gap; i < n; ++i) {
+            int temp = A[i];
+            int j = i;
+
+            while (j >= gap && A[j - gap] > temp) {
+                A[j] = A[j - gap];
+                j -= gap;
+            }
+            A[j] = temp;
+        }
+    }
+}</code></pre>
+      </details>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const els = {
+    row: document.getElementById('arrayRow'),
+    stage: document.getElementById('stage'),
+    svg: document.getElementById('linkLayer'),
+    msg: document.getElementById('message'),
+    subseq: document.getElementById('subseq'),
+    trackTitle: document.getElementById('trackTitle'),
+    gapPills: document.getElementById('gapPills'),
+    statGap: document.getElementById('statGap'),
+    statCmp: document.getElementById('statCmp'),
+    statMove: document.getElementById('statMove'),
+    arrayInput: document.getElementById('arrayInput'),
+    gapMode: document.getElementById('gapMode'),
+    customGaps: document.getElementById('customGaps'),
+    speed: document.getElementById('speed'),
+    speedText: document.getElementById('speedText'),
+    play: document.getElementById('playBtn'),
+    step: document.getElementById('stepBtn'),
+    reset: document.getElementById('resetBtn'),
+    random: document.getElementById('randomBtn'),
+    toast: document.getElementById('toast')
+  };
+
+  let state = {
+    base:[49,38,65,97,76,13,27,49,55,4],
+    gaps:[5,3,1],
+    steps:[],
+    idx:0,
+    timer:null,
+    playing:false
+  };
+
+  function pad(v){ return v >= 0 && v < 10 ? '0' + v : String(v); }
+  function parseNums(str){
+    const nums = str.split(/[，,\s]+/).map(s=>s.trim()).filter(Boolean).map(Number);
+    if(nums.some(n => Number.isNaN(n))) throw new Error('数组只能输入数字，用逗号隔开。');
+    if(nums.length < 2) throw new Error('至少输入 2 个元素。');
+    if(nums.length > 14) throw new Error('为了动画清晰，最多输入 14 个元素。');
+    return nums;
+  }
+  function halfGaps(n){
+    const gs=[];
+    for(let g=Math.floor(n/2); g>0; g=Math.floor(g/2)) gs.push(g);
+    return gs;
+  }
+  function getGaps(n){
+    if(els.gapMode.value === 'book') return [5,3,1].filter(g => g < n);
+    if(els.gapMode.value === 'half') return halfGaps(n);
+    const gs = parseNums(els.customGaps.value)
+      .map(Math.floor)
+      .filter(g => g > 0 && g < n)
+      .sort((a,b)=>b-a);
+    const unique = [...new Set(gs)];
+    if(unique[unique.length-1] !== 1) unique.push(1);
+    if(unique.length === 0) throw new Error('自定义增量需要填写正整数，例如：5,3,1。');
+    return unique;
+  }
+  function groupIndices(n, gap, start){
+    if(!gap || start === undefined || start === null) return [];
+    const r = ((start % gap) + gap) % gap;
+    const arr=[];
+    for(let i=r; i<n; i+=gap) arr.push(i);
+    return arr;
+  }
+  function cloneStep(step){ return {...step, arr: step.arr.slice()}; }
+  function push(steps, obj, a, compares, moves){
+    steps.push({arr:a.slice(), compares, moves, ...obj});
+  }
+  function generateSteps(input, gaps){
+    const a = input.slice();
+    const steps=[];
+    let compares=0, moves=0;
+    push(steps, {type:'init', gap:null, msg:'准备开始：希尔排序会先用较大的 gap 分组，再逐步缩小 gap。'}, a, compares, moves);
+    gaps.forEach((gap, passIndex) => {
+      push(steps, {type:'gapStart', gap, passIndex, msg:`第 ${passIndex+1} 趟：gap = ${gap}。相隔 ${gap} 的元素被放到同一组，组内做插入排序。`}, a, compares, moves);
+      for(let i=gap; i<a.length; i++){
+        const key = a[i];
+        let j = i;
+        const group = groupIndices(a.length, gap, i);
+        push(steps, {type:'take', gap, passIndex, key, keyIndex:i, group, activeIndex:i, msg:`取 A[${i}] = ${pad(key)} 作为 key，在当前子序列中向前寻找插入位置。`}, a, compares, moves);
+        while(j >= gap){
+          compares++;
+          const from = j - gap;
+          const shouldMove = a[from] > key;
+          push(steps, {type: shouldMove ? 'compare' : 'compareStop', gap, passIndex, key, keyIndex:i, group, compareFrom:from, compareTo:j, msg: shouldMove ? `比较：A[${from}] = ${pad(a[from])} > key = ${pad(key)}，需要把它向后移动 ${gap} 格。` : `比较：A[${from}] = ${pad(a[from])} ≤ key = ${pad(key)}，停止后移。`}, a, compares, moves);
+          if(!shouldMove) break;
+          a[j] = a[from];
+          moves++;
+          push(steps, {type:'shift', gap, passIndex, key, keyIndex:i, group, from, to:j, msg:`后移：把 A[${from}] 放到 A[${j}]，空位继续向前找。`}, a, compares, moves);
+          j -= gap;
+        }
+        a[j] = key;
+        moves++;
+        push(steps, {type:'insert', gap, passIndex, key, keyIndex:j, group, insertAt:j, msg:`插入：key = ${pad(key)} 放入 A[${j}]，这个子序列局部有序。`}, a, compares, moves);
+      }
+      push(steps, {type:'gapDone', gap, passIndex, doneGap:gap, msg:`gap = ${gap} 这一趟结束。下一趟用更小的 gap 继续细调。`}, a, compares, moves);
+    });
+    push(steps, {type:'done', gap:1, passIndex:gaps.length-1, msg:'排序完成：最后 gap=1 后，整个数组已经有序。'}, a, compares, moves);
+    return steps.map(cloneStep);
+  }
+
+  function showToast(text){
+    if(!text){ els.toast.style.display='none'; els.toast.textContent=''; return; }
+    els.toast.style.display='block'; els.toast.textContent=text;
+  }
+  function setupFromInputs(){
+    try{
+      stop();
+      state.base = parseNums(els.arrayInput.value);
+      state.gaps = getGaps(state.base.length);
+      if(!state.gaps.includes(1)) state.gaps.push(1);
+      state.steps = generateSteps(state.base, state.gaps);
+      state.idx = 0;
+      showToast('');
+      render();
+    }catch(e){ showToast(e.message); }
+  }
+  function current(){ return state.steps[state.idx] || {arr:state.base, msg:''}; }
+  function render(){
+    const s = current();
+    renderArray(s);
+    renderText(s);
+    renderGaps(s);
+    requestAnimationFrame(() => drawLinks(s));
+    els.play.textContent = state.playing ? '暂停' : '开始';
+  }
+  function renderArray(s){
+    const max = Math.max(...s.arr, 1);
+    const groupSet = new Set(s.group || []);
+    els.row.innerHTML = s.arr.map((v,i)=>{
+      const h = 18 + (v / max) * 62;
+      const cls = ['cell'];
+      if(groupSet.has(i)) cls.push('group');
+      if(s.type === 'take' && i === s.keyIndex) cls.push('key');
+      if((s.type === 'compare' || s.type === 'compareStop') && (i === s.compareFrom || i === s.compareTo)) cls.push('compare');
+      if(s.type === 'shift' && (i === s.from || i === s.to)) cls.push('move');
+      if(s.type === 'insert' && i === s.insertAt) cls.push('insert');
+      if(s.type === 'done') cls.push('done');
+      return `<div class="${cls.join(' ')}" data-i="${i}" style="--h:${h.toFixed(1)}">
+        <span class="idx">A[${i}]</span>
+        <span class="val">${pad(v)}</span>
+        <span class="bar"></span>
+      </div>`;
+    }).join('');
+  }
+  function renderText(s){
+    els.msg.textContent = s.msg || '';
+    els.statGap.textContent = s.gap || '-';
+    els.statCmp.textContent = s.compares || 0;
+    els.statMove.textContent = s.moves || 0;
+    const gap = s.gap;
+    if(s.group && s.group.length){
+      els.trackTitle.textContent = `当前子序列：下标相差 ${gap}`;
+      const active = new Set([s.keyIndex, s.compareFrom, s.compareTo, s.from, s.to, s.insertAt].filter(x => x !== undefined));
+      els.subseq.innerHTML = s.group.map(i => `<span class="pill ${active.has(i)?'active':''}"><small>A[${i}]</small>${pad(s.arr[i])}</span>`).join('');
+    }else if(gap){
+      els.trackTitle.textContent = `gap = ${gap}`;
+      els.subseq.innerHTML = `<span class="pill active">相隔 ${gap} 的元素为一组</span>`;
+    }else{
+      els.trackTitle.textContent = '当前子序列';
+      els.subseq.innerHTML = `<span class="pill active">等待开始</span>`;
+    }
+  }
+  function renderGaps(s){
+    const currentGap = s.gap;
+    const passIndex = s.passIndex;
+    els.gapPills.innerHTML = state.gaps.map((g,idx)=>{
+      const cls = ['gap-pill'];
+      if(currentGap === g) cls.push('active');
+      if(passIndex !== undefined && idx < passIndex) cls.push('done');
+      if(s.type === 'done') cls.push('done');
+      return `<span class="${cls.join(' ')}">gap ${g}</span>`;
+    }).join('');
+  }
+  function cellCenter(i){
+    const cell = els.row.querySelector(`[data-i="${i}"]`);
+    if(!cell) return null;
+    const r = cell.getBoundingClientRect();
+    const sr = els.stage.getBoundingClientRect();
+    return {x:r.left - sr.left + r.width/2 + els.stage.scrollLeft, y:r.top - sr.top + 42};
+  }
+  function pathCurve(a,b,lift=42){
+    return `M ${a.x} ${a.y} C ${a.x} ${a.y-lift}, ${b.x} ${b.y-lift}, ${b.x} ${b.y}`;
+  }
+  function drawLinks(s){
+    const width = Math.max(els.stage.scrollWidth, els.stage.clientWidth);
+    const height = els.stage.clientHeight;
+    els.svg.setAttribute('width', width);
+    els.svg.setAttribute('height', height);
+    els.svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+    let html = `<defs>
+      <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+        <path d="M0,0 L0,6 L9,3 z" fill="#ff8a3d"></path>
+      </marker>
+    </defs>`;
+    if(s.group && s.group.length > 1){
+      for(let k=0;k<s.group.length-1;k++){
+        const a=cellCenter(s.group[k]);
+        const b=cellCenter(s.group[k+1]);
+        if(a && b) html += `<path d="${pathCurve(a,b,34)}" fill="none" stroke="#c7d0ff" stroke-width="2" stroke-dasharray="6 6" opacity=".9"></path>`;
+      }
+    }
+    if(s.type === 'shift' && s.from !== undefined && s.to !== undefined){
+      const a=cellCenter(s.from), b=cellCenter(s.to);
+      if(a && b) html += `<path d="${pathCurve(a,b,56)}" fill="none" stroke="#ff8a3d" stroke-width="4" marker-end="url(#arrow)"></path>`;
+    }
+    if((s.type === 'compare' || s.type === 'compareStop') && s.compareFrom !== undefined){
+      const a=cellCenter(s.compareFrom), b=cellCenter(s.compareTo);
+      if(a && b) html += `<path d="${pathCurve(a,b,48)}" fill="none" stroke="#ff8a3d" stroke-width="3" opacity=".85"></path>`;
+    }
+    els.svg.innerHTML = html;
+  }
+  function next(){
+    if(state.idx < state.steps.length-1){ state.idx++; render(); return true; }
+    stop(); return false;
+  }
+  function delay(){ return Math.max(120, 880 - Number(els.speed.value)*135); }
+  function tick(){
+    if(!state.playing) return;
+    const ok = next();
+    if(ok) state.timer = setTimeout(tick, delay());
+  }
+  function play(){
+    if(state.playing){ stop(); return; }
+    if(state.idx >= state.steps.length-1) state.idx = 0;
+    state.playing = true;
+    render();
+    state.timer = setTimeout(tick, 120);
+  }
+  function stop(){
+    state.playing = false;
+    if(state.timer) clearTimeout(state.timer);
+    state.timer = null;
+    if(els.play) els.play.textContent = '开始';
+  }
+  function randomize(){
+    stop();
+    const len = 10;
+    const arr = Array.from({length:len}, () => Math.floor(Math.random()*91)+4);
+    els.arrayInput.value = arr.map(pad).join(', ');
+    setupFromInputs();
+  }
+
+  els.play.addEventListener('click', play);
+  els.step.addEventListener('click', () => { stop(); next(); });
+  els.reset.addEventListener('click', setupFromInputs);
+  els.random.addEventListener('click', randomize);
+  els.arrayInput.addEventListener('change', setupFromInputs);
+  els.gapMode.addEventListener('change', setupFromInputs);
+  els.customGaps.addEventListener('change', setupFromInputs);
+  els.speed.addEventListener('input', () => { els.speedText.textContent = els.speed.value + 'x'; });
+  els.stage.addEventListener('scroll', () => drawLinks(current()));
+  window.addEventListener('resize', () => drawLinks(current()));
+
+  setupFromInputs();
+})();
+</script>
+</body>
+</html>

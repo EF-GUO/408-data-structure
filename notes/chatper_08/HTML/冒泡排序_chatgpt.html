@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>冒泡排序可视化</title>
+<style>
+  :root{
+    --bg:#f6f8fc;
+    --card:#ffffff;
+    --ink:#182230;
+    --muted:#69768a;
+    --line:#e7ebf2;
+    --primary:#4f6df5;
+    --soft:#eef3ff;
+    --orange:#ff9a3c;
+    --green:#1db47f;
+    --purple:#7c4dff;
+    --red:#f04b6a;
+    --shadow:0 18px 40px rgba(25,40,72,.08);
+    --radius:22px;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 0% 0%, rgba(79,109,245,.10), transparent 26vw),
+      radial-gradient(circle at 100% 0%, rgba(124,77,255,.08), transparent 25vw),
+      var(--bg);
+  }
+  .page{width:min(1180px, calc(100% - 24px)); margin:20px auto 32px;}
+  .card{background:rgba(255,255,255,.92); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow)}
+  .hero{padding:24px 26px; display:grid; grid-template-columns:1.2fr .8fr; gap:16px; align-items:stretch;}
+  .tag{display:inline-block; padding:7px 12px; border-radius:999px; background:var(--soft); color:#4056ca; font-size:13px; font-weight:800;}
+  h1{margin:14px 0 10px; font-size:clamp(28px,4vw,48px); line-height:1.05; letter-spacing:-.03em}
+  .lead{margin:0; color:var(--muted); line-height:1.75; font-size:16px; max-width:760px}
+  .mini{display:grid; gap:10px;}
+  .mini-box{padding:14px 15px; border-radius:18px; background:#fbfcff; border:1px solid var(--line)}
+  .mini-box b{display:block; margin-bottom:5px; font-size:15px}
+  .mini-box span{color:var(--muted); font-size:14px; line-height:1.6}
+
+  .demo{margin-top:16px; padding:20px}
+  .demo-head{display:flex; justify-content:space-between; gap:14px; align-items:flex-start; margin-bottom:14px}
+  .demo-head h2{margin:0 0 6px; font-size:24px}
+  .demo-head p{margin:0; color:var(--muted); line-height:1.6}
+  .stats{display:flex; flex-wrap:wrap; gap:8px}
+  .stat{min-width:90px; padding:10px 12px; border-radius:16px; background:#fafbff; border:1px solid var(--line)}
+  .stat small{display:block; color:var(--muted); font-size:12px; margin-bottom:3px}
+  .stat strong{font-size:18px}
+
+  .stage{padding:20px 14px 16px; border-radius:20px; border:1px solid var(--line); background:linear-gradient(180deg, #fff, #fbfcff); min-height:340px; overflow:auto}
+  .bars{display:flex; align-items:flex-end; justify-content:center; gap:10px; min-height:280px; min-width:max-content; padding:10px 8px 0}
+  .item{width:70px; min-width:70px; display:flex; flex-direction:column; align-items:center; gap:8px; transition:.24s ease}
+  .value{font-size:15px; font-weight:800; color:#24324b}
+  .bar-wrap{
+    width:100%; height:230px; display:flex; align-items:flex-end; justify-content:center;
+  }
+  .bar{
+    width:44px; border-radius:14px 14px 8px 8px;
+    height:calc(var(--h) * 1px);
+    min-height:16px;
+    background:linear-gradient(180deg,#8fa6ff,#4f6df5);
+    box-shadow:0 10px 18px rgba(79,109,245,.14);
+    position:relative; transition:.24s ease;
+  }
+  .index{font-size:12px; color:#98a2b3}
+  .item.compare .bar{background:linear-gradient(180deg,#ffc285,#ff9a3c); box-shadow:0 10px 18px rgba(255,154,60,.20)}
+  .item.swap .bar{background:linear-gradient(180deg,#b69dff,#7c4dff); box-shadow:0 10px 18px rgba(124,77,255,.20)}
+  .item.done .bar{background:linear-gradient(180deg,#6ce0b9,#1db47f); box-shadow:0 10px 18px rgba(29,180,127,.18)}
+  .item.sorted .bar{background:linear-gradient(180deg,#8ae8c7,#26bd89)}
+  .item.current .value{color:#4056ca}
+  .legend{display:flex; flex-wrap:wrap; gap:10px; margin-top:12px; color:var(--muted); font-size:13px}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+  .dot{width:10px; height:10px; border-radius:50%; background:#4f6df5}
+  .dot.c2{background:#ff9a3c}.dot.c3{background:#7c4dff}.dot.c4{background:#1db47f}
+
+  .controls{display:grid; grid-template-columns:minmax(280px, 1fr) auto; gap:12px; align-items:end; margin-top:16px}
+  .left-controls{display:grid; gap:10px}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+  input,button{font:inherit}
+  .array-input{flex:1 1 420px; min-width:240px; padding:12px 14px; border-radius:16px; border:1px solid var(--line); background:#fff; outline:none}
+  .array-input:focus{border-color:#b9c5ff; box-shadow:0 0 0 4px rgba(79,109,245,.12)}
+  .speed{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:14px}
+  input[type="range"]{accent-color:var(--primary); width:170px}
+  .buttons{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+  button{border:0; border-radius:15px; padding:12px 16px; font-weight:850; cursor:pointer; transition:.18s ease}
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  .primary{color:#fff; background:linear-gradient(135deg,var(--primary),var(--purple)); box-shadow:0 12px 20px rgba(79,109,245,.18)}
+  .ghost{background:#fff; color:#30405c; border:1px solid var(--line)}
+
+  .msg-wrap{display:grid; grid-template-columns:1fr 280px; gap:12px; margin-top:14px}
+  .msg,.tips{padding:14px 16px; border-radius:18px; border:1px solid var(--line); background:#fbfcff}
+  .msg{font-weight:700; line-height:1.65; min-height:72px; display:flex; align-items:center}
+  .tips h3{margin:0 0 8px; font-size:15px}
+  .tips ul{margin:0; padding-left:18px; color:var(--muted); line-height:1.7; font-size:14px}
+
+  details{margin-top:16px; background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden}
+  summary{list-style:none; cursor:pointer; padding:16px 18px; font-weight:900}
+  summary::-webkit-details-marker{display:none}
+  pre{margin:0; padding:16px 18px 20px; background:#0f1728; color:#edf2ff; overflow:auto; line-height:1.6; font-size:14px}
+  .error{display:none; margin-top:10px; padding:10px 12px; border-radius:14px; background:#fff2f4; color:#b42318; border:1px solid #ffd5de; font-size:14px}
+
+  @media (max-width:960px){
+    .hero,.msg-wrap,.controls{grid-template-columns:1fr}
+    .buttons{justify-content:flex-start}
+  }
+  @media (max-width:640px){
+    .page{width:min(100% - 16px, 1180px); margin-top:10px}
+    .hero,.demo{padding:16px}
+    .item{width:58px; min-width:58px}
+    .bar{width:36px}
+    .bars{gap:8px}
+    .demo-head{display:block}
+    .stats{margin-top:12px}
+  }
+</style>
+</head>
+<body>
+  <main class="page">
+    <section class="card hero">
+      <div>
+        <span class="tag">Bubble Sort 冒泡排序</span>
+        <h1>相邻比较，较大值一路“冒”到后面</h1>
+        <p class="lead">每一趟从左到右比较相邻两个元素，若前者大于后者就交换。完成一趟后，当前最大值会移动到本趟末尾；重复执行，直到整个序列有序。</p>
+      </div>
+      <div class="mini">
+        <div class="mini-box"><b>核心</b><span>比较相邻元素，逆序就交换。</span></div>
+        <div class="mini-box"><b>特点</b><span>稳定排序，原地排序。</span></div>
+        <div class="mini-box"><b>复杂度</b><span>空间 O(1)，时间平均 / 最坏 O(n²)。</span></div>
+      </div>
+    </section>
+
+    <section class="card demo">
+      <div class="demo-head">
+        <div>
+          <h2>可视化交互</h2>
+          <p>橙色：正在比较　紫色：正在交换　绿色：已归位</p>
+        </div>
+        <div class="stats">
+          <div class="stat"><small>趟数</small><strong id="passNum">0</strong></div>
+          <div class="stat"><small>比较</small><strong id="cmpNum">0</strong></div>
+          <div class="stat"><small>交换</small><strong id="swapNum">0</strong></div>
+          <div class="stat"><small>状态</small><strong id="stateTxt">待开始</strong></div>
+        </div>
+      </div>
+
+      <div class="stage">
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="legend">
+        <span><i class="dot"></i>未处理</span>
+        <span><i class="dot c2"></i>比较中</span>
+        <span><i class="dot c3"></i>交换中</span>
+        <span><i class="dot c4"></i>本轮已确定 / 已排序</span>
+      </div>
+
+      <div class="controls">
+        <div class="left-controls">
+          <div class="row">
+            <input id="arrayInput" class="array-input" value="49, 38, 65, 97, 76, 13, 27, 49, 55, 4" aria-label="数组输入">
+          </div>
+          <div class="row speed">
+            <span>速度</span>
+            <input id="speedRange" type="range" min="120" max="1200" step="60" value="520">
+            <span id="speedText">520 ms</span>
+          </div>
+        </div>
+        <div class="buttons">
+          <button id="startBtn" class="primary">开始</button>
+          <button id="pauseBtn" class="ghost">暂停</button>
+          <button id="stepBtn" class="ghost">单步</button>
+          <button id="resetBtn" class="ghost">重置</button>
+          <button id="randomBtn" class="ghost">随机数组</button>
+        </div>
+      </div>
+      <div class="error" id="errorBox"></div>
+
+      <div class="msg-wrap">
+        <div class="msg" id="message">输入数组后点击“开始”，观察较大元素如何逐趟向右移动。</div>
+        <div class="tips">
+          <h3>观察重点</h3>
+          <ul>
+            <li>一趟结束，最右边多一个有序元素。</li>
+            <li>若某一趟没有交换，说明已经有序。</li>
+            <li>适合理解排序思想，不适合大数据量。</li>
+          </ul>
+        </div>
+      </div>
+
+      <details>
+        <summary>查看简洁代码</summary>
+<pre><code>void BubbleSort(int *a, int n){
+    if(a == NULL || n <= 1) return;
+    for(int i = 0; i &lt; n - 1; i++){
+        int swapped = 0;
+        for(int j = 0; j &lt; n - 1 - i; j++){
+            if(a[j] &gt; a[j + 1]){
+                int t = a[j];
+                a[j] = a[j + 1];
+                a[j + 1] = t;
+                swapped = 1;
+            }
+        }
+        if(!swapped) break;
+    }
+}</code></pre>
+      </details>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const barsEl = document.getElementById('bars');
+  const inputEl = document.getElementById('arrayInput');
+  const messageEl = document.getElementById('message');
+  const errorBox = document.getElementById('errorBox');
+  const passNum = document.getElementById('passNum');
+  const cmpNum = document.getElementById('cmpNum');
+  const swapNum = document.getElementById('swapNum');
+  const stateTxt = document.getElementById('stateTxt');
+  const speedRange = document.getElementById('speedRange');
+  const speedText = document.getElementById('speedText');
+
+  const startBtn = document.getElementById('startBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const stepBtn = document.getElementById('stepBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const randomBtn = document.getElementById('randomBtn');
+
+  let source = [];
+  let arr = [];
+  let steps = [];
+  let stepIndex = 0;
+  let timer = null;
+  let playing = false;
+  let speed = +speedRange.value;
+  let currentStats = {pass:0, cmp:0, swap:0, state:'待开始'};
+
+  function showError(msg=''){
+    errorBox.style.display = msg ? 'block' : 'none';
+    errorBox.textContent = msg;
+  }
+
+  function parseInput(){
+    const raw = inputEl.value.trim();
+    const parts = raw.split(/[，,\s]+/).filter(Boolean);
+    if(parts.length < 2) throw new Error('至少输入 2 个数字。');
+    if(parts.length > 14) throw new Error('为了便于展示，建议不超过 14 个数字。');
+    const nums = parts.map(v => Number(v));
+    if(nums.some(v => Number.isNaN(v))) throw new Error('请输入合法数字，使用逗号或空格分隔。');
+    return nums;
+  }
+
+  function randomArray(){
+    const len = 9 + Math.floor(Math.random() * 3);
+    const nums = Array.from({length:len}, () => 10 + Math.floor(Math.random() * 89));
+    inputEl.value = nums.join(', ');
+    init();
+  }
+
+  function buildSteps(nums){
+    const a = nums.slice();
+    const s = [];
+    let cmp = 0, sw = 0;
+    s.push({type:'init', arr:a.slice(), sortedFrom:a.length, pass:0, cmp, swap:sw, text:'准备开始：从左到右比较相邻元素。'});
+
+    for(let i = 0; i < a.length - 1; i++){
+      let swapped = false;
+      s.push({type:'passStart', arr:a.slice(), sortedFrom:a.length - i, pass:i + 1, cmp, swap:sw, text:`第 ${i + 1} 趟开始：本趟会把未排序部分的最大值移到右端。`});
+      for(let j = 0; j < a.length - 1 - i; j++){
+        cmp++;
+        s.push({type:'compare', arr:a.slice(), compare:[j,j+1], sortedFrom:a.length - i, pass:i + 1, cmp, swap:sw, text:`比较 a[${j}] = ${a[j]} 和 a[${j+1}] = ${a[j+1]}。`});
+        if(a[j] > a[j+1]){
+          swapped = true;
+          const left = a[j], right = a[j+1];
+          [a[j], a[j+1]] = [a[j+1], a[j]];
+          sw++;
+          s.push({type:'swap', arr:a.slice(), compare:[j,j+1], sortedFrom:a.length - i, pass:i + 1, cmp, swap:sw, text:`${left} > ${right}，交换位置。`});
+        }
+      }
+      s.push({type:'mark', arr:a.slice(), doneIndex:a.length - 1 - i, sortedFrom:a.length - 1 - i, pass:i + 1, cmp, swap:sw, text:`第 ${i + 1} 趟结束：位置 ${a.length - 1 - i} 已归位。`});
+      if(!swapped){
+        s.push({type:'finish', arr:a.slice(), sortedFrom:0, pass:i + 1, cmp, swap:sw, text:`本趟没有交换，序列已经有序，提前结束。`});
+        return s;
+      }
+    }
+    s.push({type:'finish', arr:a.slice(), sortedFrom:0, pass:a.length - 1, cmp, swap:sw, text:'排序完成：整个序列已经有序。'});
+    return s;
+  }
+
+  function render(step){
+    const data = step.arr;
+    const maxVal = Math.max(...data);
+    barsEl.innerHTML = '';
+
+    data.forEach((v, idx) => {
+      const item = document.createElement('div');
+      item.className = 'item';
+      if(step.compare && step.compare.includes(idx)) item.classList.add(step.type === 'swap' ? 'swap' : 'compare', 'current');
+      if(step.doneIndex === idx) item.classList.add('done');
+      if(step.sortedFrom !== undefined && idx >= step.sortedFrom) item.classList.add('sorted');
+
+      const value = document.createElement('div');
+      value.className = 'value';
+      value.textContent = v;
+
+      const barWrap = document.createElement('div');
+      barWrap.className = 'bar-wrap';
+      const bar = document.createElement('div');
+      bar.className = 'bar';
+      bar.style.setProperty('--h', Math.round((v / maxVal) * 180) + 20);
+      barWrap.appendChild(bar);
+
+      const index = document.createElement('div');
+      index.className = 'index';
+      index.textContent = idx;
+
+      item.append(value, barWrap, index);
+      barsEl.appendChild(item);
+    });
+
+    messageEl.textContent = step.text;
+    passNum.textContent = step.pass ?? 0;
+    cmpNum.textContent = step.cmp ?? 0;
+    swapNum.textContent = step.swap ?? 0;
+    stateTxt.textContent = step.type === 'finish' ? '已完成' : (playing ? '演示中' : '已暂停');
+    if(step.type === 'init') stateTxt.textContent = '待开始';
+  }
+
+  function stopTimer(){
+    if(timer){ clearTimeout(timer); timer = null; }
+  }
+
+  function playLoop(){
+    if(!playing) return;
+    if(stepIndex >= steps.length){
+      playing = false;
+      stateTxt.textContent = '已完成';
+      return;
+    }
+    render(steps[stepIndex]);
+    stepIndex++;
+    if(stepIndex >= steps.length){
+      playing = false;
+      stateTxt.textContent = '已完成';
+      return;
+    }
+    timer = setTimeout(playLoop, speed);
+  }
+
+  function init(){
+    stopTimer();
+    playing = false;
+    showError('');
+    try{
+      source = parseInput();
+      arr = source.slice();
+      steps = buildSteps(arr);
+      stepIndex = 0;
+      render(steps[0]);
+    }catch(err){
+      barsEl.innerHTML = '';
+      messageEl.textContent = '请输入正确的数组后再开始。';
+      passNum.textContent = cmpNum.textContent = swapNum.textContent = '0';
+      stateTxt.textContent = '输入错误';
+      showError(err.message || '输入有误');
+    }
+  }
+
+  startBtn.addEventListener('click', () => {
+    if(!steps.length) init();
+    if(!steps.length) return;
+    if(stepIndex >= steps.length) stepIndex = 0;
+    playing = true;
+    stateTxt.textContent = '演示中';
+    stopTimer();
+    if(stepIndex === 0) stepIndex = 1;
+    playLoop();
+  });
+
+  pauseBtn.addEventListener('click', () => {
+    playing = false;
+    stopTimer();
+    if(steps.length) stateTxt.textContent = stepIndex >= steps.length ? '已完成' : '已暂停';
+  });
+
+  stepBtn.addEventListener('click', () => {
+    if(!steps.length) init();
+    if(!steps.length) return;
+    playing = false;
+    stopTimer();
+    if(stepIndex < steps.length - 1){
+      stepIndex++;
+      render(steps[stepIndex]);
+    }else if(stepIndex === steps.length - 1){
+      render(steps[stepIndex]);
+      stepIndex++;
+    }
+    stateTxt.textContent = stepIndex >= steps.length ? '已完成' : '已暂停';
+  });
+
+  resetBtn.addEventListener('click', init);
+  randomBtn.addEventListener('click', randomArray);
+  inputEl.addEventListener('change', init);
+
+  speedRange.addEventListener('input', () => {
+    speed = +speedRange.value;
+    speedText.textContent = `${speed} ms`;
+  });
+
+  speedText.textContent = `${speed} ms`;
+  init();
+})();
+</script>
+</body>
+</html>

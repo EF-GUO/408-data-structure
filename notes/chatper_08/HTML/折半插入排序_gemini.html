@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>折半插入排序可视化 - 增强版</title>
+    <!-- 引入 Tailwind CSS 用于现代化排版和样式 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 FontAwesome 用于图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* 基础过渡 */
+        .item-transition {
+            transition: all 0.3s ease-in-out;
+        }
+        
+        /* 状态样式定义 */
+        .state-current {
+            transform: translateY(-25px) scale(1.1);
+            box-shadow: 0 10px 20px -5px rgba(244, 63, 94, 0.4);
+            z-index: 20;
+        }
+        .state-comparing {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.5);
+            z-index: 10;
+            border-width: 3px !important;
+        }
+        /* 后移状态 */
+        .state-shifted {
+            z-index: 30;
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px -3px rgba(14, 165, 233, 0.3);
+        }
+
+        /* 自定义动画：比较箭头跳动 */
+        @keyframes bounce-up {
+            0%, 100% { transform: translate(-50%, 0); }
+            50% { transform: translate(-50%, -10px); }
+        }
+        .animate-bounce-up {
+            animation: bounce-up 1s infinite;
+        }
+
+        /* 自定义动画：移动箭头脉冲 */
+        @keyframes pulse-right {
+            0%, 100% { transform: translate(-5px, -50%) scale(1); opacity: 0.8; }
+            50% { transform: translate(3px, -50%) scale(1.1); opacity: 1; }
+        }
+        .animate-pulse-right {
+            animation: pulse-right 1s infinite;
+        }
+
+        /* 代码高亮相关样式 */
+        .code-line {
+            padding: 2px 12px;
+            margin: 2px 0;
+            border-left: 3px solid transparent;
+            border-radius: 0 4px 4px 0;
+            transition: all 0.2s ease;
+            white-space: pre;
+        }
+        .code-line.active {
+            background-color: rgba(16, 185, 129, 0.15);
+            border-left-color: #10b981;
+            color: #fff;
+            text-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+        }
+
+        /* 指针徽章样式 */
+        .ptr-badge {
+            font-size: 0.7rem;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col items-center py-8 px-4 font-sans selection:bg-emerald-200">
+
+    <!-- 标题区 -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight mb-2">折半插入排序可视化 <span class="text-emerald-500">增强版</span></h1>
+        <p class="text-slate-500 text-sm max-w-2xl mx-auto">
+            红色的 <span class="bg-rose-100 text-rose-700 px-1 rounded text-xs font-bold">49*</span> 用于验证算法的<strong>稳定性</strong>。注意观察下方 Low/Mid/High 指针的查找过程。
+        </p>
+    </div>
+
+    <!-- 主内容区：左右布局 -->
+    <div class="flex flex-col lg:flex-row gap-6 w-full max-w-[1450px]">
+        
+        <!-- 左侧：主展示卡片 -->
+        <div class="flex-1 bg-white rounded-3xl shadow-2xl shadow-slate-200/50 p-6 md:p-10 border border-slate-50 relative overflow-hidden flex flex-col justify-between">
+            
+            <!-- 背景装饰 -->
+            <div class="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-emerald-100 rounded-full opacity-50 blur-3xl pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-sky-100 rounded-full opacity-50 blur-3xl pointer-events-none"></div>
+
+            <div class="z-10 relative">
+                <!-- 信息面板 (进度 & 哨兵) -->
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-6 mb-10 bg-slate-50/80 backdrop-blur-sm rounded-2xl p-5 border border-slate-100">
+                    <div class="flex items-center gap-3">
+                        <span class="text-slate-500 font-bold text-sm uppercase tracking-wider">当前进度</span>
+                        <span id="step-counter" class="bg-white text-slate-700 py-1 px-4 rounded-full text-sm font-extrabold shadow-sm border border-slate-200">0 / 0</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4">
+                        <span class="text-slate-500 font-bold text-sm uppercase tracking-wider">哨兵 A[0] (暂存)</span>
+                        <div class="relative">
+                            <div id="sentinel-box" class="w-14 h-14 flex items-center justify-center bg-rose-50 border-2 border-rose-300 text-rose-600 rounded-xl font-bold text-xl shadow-inner item-transition relative z-10">
+                                无
+                            </div>
+                            <div id="sentinel-arrow" class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-rose-400 text-2xl opacity-0 transition-opacity duration-300">
+                                <i class="fa-solid fa-arrow-down-long"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 核心：数组可视化容器 -->
+                <!-- 增加 pt-10 留出顶部箭头空间，增加 pb-16 留出底部指针空间 -->
+                <div class="flex justify-center items-start gap-3 md:gap-5 min-h-[180px] mb-8 pt-10 pb-16 relative" id="array-container">
+                    <!-- 数组方块由 JS 动态渲染 -->
+                </div>
+
+                <!-- 讲解提示框 -->
+                <div class="bg-sky-50/80 backdrop-blur-sm border-l-4 border-sky-500 p-6 rounded-r-2xl mb-6 min-h-[100px] flex items-center shadow-sm">
+                    <div class="mr-4 text-sky-500 text-2xl"><i class="fa-solid fa-circle-info"></i></div>
+                    <p id="message-box" class="text-sky-900 text-base leading-relaxed m-0 font-medium">
+                        点击“下一步”或“播放”开始演示。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 控制面板 -->
+            <div class="flex flex-wrap justify-center gap-4 md:gap-6 border-t border-slate-100 pt-6 z-10 relative mt-auto">
+                <button onclick="init()" class="flex items-center gap-2 px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-all active:scale-95">
+                    <i class="fa-solid fa-rotate-left"></i> 重置
+                </button>
+                
+                <button id="btn-prev" onclick="prevStep()" class="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-emerald-50 text-emerald-700 font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-emerald-200 active:scale-95">
+                    <i class="fa-solid fa-chevron-left"></i> 上一步
+                </button>
+                
+                <button id="btn-play" onclick="togglePlay()" class="flex items-center gap-2 px-8 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-all shadow-lg shadow-emerald-500/30 w-40 justify-center active:scale-95">
+                    <i id="play-icon" class="fa-solid fa-play"></i> <span id="play-text">自动播放</span>
+                </button>
+                
+                <button id="btn-next" onclick="nextStep()" class="flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-emerald-50 text-emerald-700 font-bold rounded-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed border-2 border-emerald-200 active:scale-95">
+                    下一步 <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 右侧：代码展示区 -->
+        <div class="w-full lg:w-[450px] xl:w-[500px] bg-[#1e293b] rounded-3xl shadow-2xl p-6 border border-slate-700 flex flex-col z-10 relative overflow-hidden">
+            <div class="absolute top-0 right-0 w-32 h-32 bg-slate-700 rounded-full opacity-20 blur-3xl pointer-events-none"></div>
+            <h3 class="text-slate-200 font-bold mb-4 flex items-center gap-2 text-lg relative z-10"><i class="fa-solid fa-code text-emerald-400"></i> 折半查找教材实现</h3>
+            <div class="bg-[#0f172a] rounded-xl p-5 flex-1 overflow-x-auto overflow-y-auto font-mono text-[13px] leading-[2.1] text-slate-400 shadow-inner border border-slate-800/50 relative z-10">
+                <div id="code-line-1" class="code-line"><span class="text-pink-400">void</span> <span class="text-blue-400">InsertSort</span>(<span class="text-emerald-400">ElemType</span> A[], <span class="text-pink-400">int</span> n){</div>
+                <div id="code-line-2" class="code-line">    <span class="text-pink-400">int</span> i, j, low, high, mid;</div>
+                <div id="code-line-3" class="code-line">    <span class="text-pink-400">for</span>(i=<span class="text-orange-400">2</span>; i&lt;=n; i++){</div>
+                <div id="code-line-4" class="code-line">        A[<span class="text-orange-400">0</span>] = A[i];               <span class="text-slate-500 italic">// 暂存到哨兵</span></div>
+                <div id="code-line-5" class="code-line">        low = <span class="text-orange-400">1</span>; high = i-<span class="text-orange-400">1</span>;       <span class="text-slate-500 italic">// 初始化查找范围</span></div>
+                <div id="code-line-6" class="code-line">        <span class="text-pink-400">while</span>(low &lt;= high){        <span class="text-slate-500 italic">// 折半查找</span></div>
+                <div id="code-line-7" class="code-line">            mid = (low + high) / <span class="text-orange-400">2</span>;</div>
+                <div id="code-line-8" class="code-line">            <span class="text-pink-400">if</span>(A[mid] > A[<span class="text-orange-400">0</span>])</div>
+                <div id="code-line-9" class="code-line">                high = mid - <span class="text-orange-400">1</span>;    <span class="text-slate-500 italic">// 左半区</span></div>
+                <div id="code-line-10" class="code-line">            <span class="text-pink-400">else</span></div>
+                <div id="code-line-11" class="code-line">                low = mid + <span class="text-orange-400">1</span>;     <span class="text-slate-500 italic">// 右半区(含相等)</span></div>
+                <div id="code-line-12" class="code-line">        }</div>
+                <div id="code-line-13" class="code-line">        <span class="text-pink-400">for</span>(j=i-<span class="text-orange-400">1</span>; j>=high+<span class="text-orange-400">1</span>; --j) <span class="text-slate-500 italic">// 统一后移</span></div>
+                <div id="code-line-14" class="code-line">            A[j+<span class="text-orange-400">1</span>] = A[j];</div>
+                <div id="code-line-15" class="code-line">        A[high+<span class="text-orange-400">1</span>] = A[<span class="text-orange-400">0</span>];            <span class="text-slate-500 italic">// 插入位置</span></div>
+                <div id="code-line-16" class="code-line">    }</div>
+                <div id="code-line-17" class="code-line">}</div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 图例 -->
+    <div class="flex flex-wrap justify-center gap-x-6 gap-y-3 mt-6 text-sm font-medium text-slate-600 bg-white py-3 px-6 rounded-full shadow-sm border border-slate-100 max-w-4xl">
+        <div class="flex items-center gap-2"><div class="w-4 h-4 rounded bg-emerald-100 border border-emerald-400"></div>已排序区</div>
+        <div class="flex items-center gap-2"><div class="w-4 h-4 rounded bg-rose-100 border border-rose-500"></div>当前哨兵</div>
+        <div class="flex items-center gap-2"><span class="ptr-badge bg-blue-500">Low</span> 查找下界</div>
+        <div class="flex items-center gap-2"><span class="ptr-badge bg-amber-500">Mid</span> 正在比较</div>
+        <div class="flex items-center gap-2"><span class="ptr-badge bg-rose-500">High</span> 查找上界</div>
+    </div>
+
+    <script>
+        // 初始化数据，49* 用于验证稳定性
+        const initialArray = [49, 38, 65, 97, 76, 13, 27, '49*'];
+        let states = []; 
+        let currentStep = 0;
+        let playInterval = null;
+        let isPlaying = false;
+
+        function generateStates() {
+            states = [];
+            let arr = [...initialArray];
+
+            states.push({
+                arr: [...arr],
+                sortedBound: 0, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: null, insertionSpotIdx: -1,
+                lowIdx: -1, highIdx: -1, midIdx: -1,
+                codeLine: 1, 
+                msg: "<b>初始状态：</b>数组第一个元素 <span class='font-bold text-emerald-600'>[49]</span> 视为初始有序序列。"
+            });
+
+            for (let i = 1; i < arr.length; i++) {
+                let temp = arr[i];
+                let tempVal = typeof temp === 'string' ? parseInt(temp.replace('*', '')) : temp;
+
+                // 提取哨兵
+                states.push({
+                    arr: [...arr],
+                    sortedBound: i - 1, targetIdx: i, compareIdx: -1, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: -1,
+                    lowIdx: -1, highIdx: -1, midIdx: -1,
+                    codeLine: 4, 
+                    msg: `<b>第 ${i} 趟：</b>准备插入 <span class='bg-rose-100 text-rose-700 px-1 rounded font-bold'>${temp}</span>。首先将其复制到哨兵 A[0] 暂存。`
+                });
+
+                let low = 0;
+                let high = i - 1;
+
+                // 初始化折半范围
+                states.push({
+                    arr: [...arr],
+                    sortedBound: i - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: -1,
+                    lowIdx: low, highIdx: high, midIdx: -1,
+                    codeLine: 5, 
+                    msg: `<b>初始化折半范围：</b>设定查找区间。此时 <b>Low</b> = 索引 ${low}，<b>High</b> = 索引 ${high}。`
+                });
+
+                while (low <= high) {
+                    let mid = Math.floor((low + high) / 2);
+                    let midVal = typeof arr[mid] === 'string' ? parseInt(arr[mid].replace('*', '')) : arr[mid];
+
+                    // 计算出 Mid，并进行比较
+                    states.push({
+                        arr: [...arr],
+                        sortedBound: i - 1, targetIdx: -1, compareIdx: mid, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: -1,
+                        lowIdx: low, highIdx: high, midIdx: mid,
+                        codeLine: 7, 
+                        msg: `<b>计算 Mid点：</b>(Low(${low}) + High(${high})) / 2 = <b>${mid}</b>。<br>将哨兵 <span class='text-rose-600 font-bold'>${temp}</span> 与 Mid指向的 <span class='text-amber-600 font-bold'>${arr[mid]}</span> 比较。`
+                    });
+
+                    if (midVal > tempVal) {
+                        high = mid - 1;
+                        states.push({
+                            arr: [...arr],
+                            sortedBound: i - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: -1,
+                            lowIdx: low, highIdx: high, midIdx: -1,
+                            codeLine: 9, 
+                            msg: `因为 ${arr[mid]} > ${temp}，说明目标在<b>左半区</b>。<br>更新 <b>High</b> = Mid - 1 = ${high}。`
+                        });
+                    } else {
+                        low = mid + 1;
+                        let extraMsg = midVal === tempVal ? `<br><span class='text-xs text-rose-500 font-bold'>(注意：遇到相等元素，算法向右查找，最终插入到相等元素之后，这是保证稳定性的关键！)</span>` : '';
+                        states.push({
+                            arr: [...arr],
+                            sortedBound: i - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: -1,
+                            lowIdx: low, highIdx: high, midIdx: -1,
+                            codeLine: 11, 
+                            msg: `因为 ${arr[mid]} &le; ${temp}，说明目标在<b>右半区</b>。<br>更新 <b>Low</b> = Mid + 1 = ${low}。${extraMsg}`
+                        });
+                    }
+                }
+
+                // 查找结束，确定位置为 high + 1
+                states.push({
+                    arr: [...arr],
+                    sortedBound: i - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: high + 1,
+                    lowIdx: low, highIdx: high, midIdx: -1,
+                    codeLine: 6, 
+                    msg: `此时 <b>Low(${low}) > High(${high})</b>，查找循环结束。<br>确定插入位置为 High + 1 = <b>${high + 1}</b>。`
+                });
+
+                // 统一后移
+                if(i - 1 >= high + 1) {
+                    states.push({
+                        arr: [...arr],
+                        sortedBound: i - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: temp, insertionSpotIdx: high + 1,
+                        lowIdx: -1, highIdx: -1, midIdx: -1,
+                        codeLine: 13, 
+                        msg: `<b>准备统一后移：</b>从索引 ${high + 1} 到 ${i - 1} 的元素都需要向后移动一位。`
+                    });
+                }
+
+                for (let j = i - 1; j >= high + 1; j--) {
+                    arr[j + 1] = arr[j];
+                    states.push({
+                        arr: [...arr],
+                        sortedBound: i - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: j + 1, sentinel: temp, insertionSpotIdx: high + 1,
+                        lowIdx: -1, highIdx: -1, midIdx: -1,
+                        codeLine: 14, 
+                        msg: `将 <span class='text-sky-600 font-bold'>${arr[j]}</span> 向后挪动到位置 ${j + 1}。`
+                    });
+                }
+
+                arr[high + 1] = temp; 
+                // 插入完成
+                states.push({
+                    arr: [...arr],
+                    sortedBound: i, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: null, insertionSpotIdx: high + 1,
+                    lowIdx: -1, highIdx: -1, midIdx: -1,
+                    codeLine: 15, 
+                    msg: `<b>执行插入：</b>将哨兵 <span class='text-emerald-600 font-bold'>${temp}</span> 放入最终位置。本趟折半插入结束。`
+                });
+            }
+
+            states.push({
+                arr: [...arr],
+                sortedBound: arr.length - 1, targetIdx: -1, compareIdx: -1, shiftedIdx: -1, sentinel: null, insertionSpotIdx: -1,
+                lowIdx: -1, highIdx: -1, midIdx: -1,
+                codeLine: 17, 
+                msg: "<b>🎉 排序完成！</b> 注意观察 49 和 49* 的相对位置，折半插入排序同样是<b>稳定</b>的。"
+            });
+        }
+
+        function render() {
+            const state = states[currentStep];
+            const container = document.getElementById('array-container');
+            container.innerHTML = '';
+
+            // 代码高亮
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
+            if (state.codeLine) {
+                const activeLine = document.getElementById(`code-line-${state.codeLine}`);
+                if (activeLine) {
+                    activeLine.classList.add('active');
+                    // 自动滚动到高亮行
+                    activeLine.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }
+            }
+
+            state.arr.forEach((val, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = "relative flex flex-col items-center group";
+
+                const div = document.createElement('div');
+                let classes = "item-transition w-14 h-16 sm:w-16 sm:h-20 md:w-20 md:h-24 flex items-center justify-center text-xl sm:text-2xl font-bold rounded-2xl border-[3px] relative z-10";
+                
+                let innerHtml = val;
+                if (typeof val === 'string' && val.includes('*')) {
+                    innerHtml = val.replace('*', '') + `<span class="absolute -top-2 -right-2 bg-rose-500 text-white text-[10px] rounded-full w-5 h-5 flex items-center justify-center shadow-sm font-bold">*</span>`;
+                }
+
+                let addonHtml = '';
+
+                // 核心状态判断
+                if (index === state.targetIdx) {
+                    classes += " bg-rose-50 border-rose-400 text-rose-600 state-current"; 
+                } else if (index === state.compareIdx) {
+                    classes += " bg-amber-50 border-amber-500 text-amber-600 state-comparing";
+                    addonHtml = `<div class="absolute -top-10 left-1/2 -translate-x-1/2 text-amber-500 text-3xl animate-pulse-right"><i class="fa-solid fa-arrow-up-long"></i></div>`;
+                } else if (index === state.shiftedIdx) {
+                    classes += " bg-sky-50 border-sky-300 text-sky-600 state-shifted";
+                    addonHtml = `<div class="absolute top-1/2 -left-10 -translate-y-1/2 text-sky-500 text-3xl animate-pulse-right z-30"><i class="fa-solid fa-arrow-right-long"></i></div>`;
+                } else if (index === state.insertionSpotIdx && state.sentinel !== null) {
+                    classes += " bg-emerald-100 border-emerald-500 text-slate-400 border-dashed scale-105";
+                    innerHtml = '<i class="fa-regular fa-circle-down text-emerald-500 opacity-50"></i>';
+                } else if (index <= state.sortedBound) {
+                    classes += " bg-emerald-50 border-emerald-300 text-emerald-700 shadow-sm";
+                    if(index === state.insertionSpotIdx && state.sentinel === null) {
+                         classes += " bg-emerald-100 scale-105 transition-transform";
+                    }
+                } else {
+                    classes += " bg-white border-slate-200 text-slate-400"; 
+                }
+
+                div.className = classes;
+                div.innerHTML = innerHtml + addonHtml;
+                wrapper.appendChild(div);
+
+                // --- 渲染底部折半指针 (Low, Mid, High) ---
+                let pointers = [];
+                if (index === state.lowIdx) pointers.push('<span class="ptr-badge bg-blue-500">Low</span>');
+                if (index === state.midIdx) pointers.push('<span class="ptr-badge bg-amber-500">Mid</span>');
+                if (index === state.highIdx) pointers.push('<span class="ptr-badge bg-rose-500">High</span>');
+
+                if (pointers.length > 0) {
+                    const ptrDiv = document.createElement('div');
+                    ptrDiv.className = "absolute -bottom-14 flex flex-col items-center gap-1 w-full z-20 item-transition";
+                    ptrDiv.innerHTML = pointers.join('');
+                    wrapper.appendChild(ptrDiv);
+                }
+
+                container.appendChild(wrapper);
+            });
+
+            // 渲染哨兵
+            const sentinelBox = document.getElementById('sentinel-box');
+            const sentinelArrow = document.getElementById('sentinel-arrow');
+            if (state.sentinel !== null) {
+                let sVal = state.sentinel;
+                if (typeof sVal === 'string' && sVal.includes('*')) {
+                    sentinelBox.innerHTML = sVal.replace('*', '') + `<span class="absolute -top-1 -right-1 bg-white text-rose-500 border border-rose-200 text-[10px] rounded-full w-5 h-5 flex items-center justify-center font-bold">*</span>`;
+                } else {
+                    sentinelBox.innerHTML = sVal;
+                }
+                sentinelBox.className = "w-14 h-14 flex items-center justify-center bg-rose-500 border-2 border-rose-600 text-white rounded-xl font-bold text-xl shadow-lg shadow-rose-500/30 state-current item-transition z-10 relative";
+                if (state.insertionSpotIdx !== -1) {
+                    sentinelArrow.classList.remove('opacity-0');
+                    sentinelArrow.classList.add('animate-bounce');
+                } else {
+                    sentinelArrow.classList.add('opacity-0');
+                    sentinelArrow.classList.remove('animate-bounce');
+                }
+            } else {
+                sentinelBox.innerHTML = '无';
+                sentinelBox.className = "w-14 h-14 flex items-center justify-center bg-slate-50 border-2 border-slate-200 text-slate-300 rounded-xl text-sm item-transition";
+                 sentinelArrow.classList.add('opacity-0');
+            }
+
+            // 更新文本和计数
+            document.getElementById('message-box').innerHTML = state.msg;
+            document.getElementById('step-counter').innerText = `${currentStep} / ${states.length - 1}`;
+
+            // 更新按钮状态
+            document.getElementById('btn-prev').disabled = currentStep === 0;
+            document.getElementById('btn-next').disabled = currentStep === states.length - 1;
+            
+            if (currentStep === states.length - 1 && isPlaying) {
+                pause();
+            }
+        }
+
+        function nextStep() {
+            if (currentStep < states.length - 1) {
+                currentStep++;
+                render();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                render();
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) pause();
+            else play();
+        }
+
+        function play() {
+            if (currentStep >= states.length - 1) {
+                currentStep = 0; 
+            }
+            isPlaying = true;
+            document.getElementById('play-icon').className = "fa-solid fa-pause";
+            document.getElementById('play-text').innerText = "暂停播放";
+            const btnPlay = document.getElementById('btn-play');
+            btnPlay.className = btnPlay.className.replace('bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30', 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/30');
+            
+            nextStep();
+            // 延长时间，让人有足够时间看清折半逻辑
+            playInterval = setInterval(nextStep, 2000); 
+        }
+
+        function pause() {
+            isPlaying = false;
+            clearInterval(playInterval);
+            document.getElementById('play-icon').className = "fa-solid fa-play";
+            document.getElementById('play-text').innerText = "自动播放";
+            const btnPlay = document.getElementById('btn-play');
+            btnPlay.className = btnPlay.className.replace('bg-amber-500 hover:bg-amber-600 shadow-amber-500/30', 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/30');
+        }
+
+        function init() {
+            pause();
+            generateStates();
+            currentStep = 0;
+            render();
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>折半插入排序可视化</title>
+<style>
+    :root {
+        --bg: #f6f8fb;
+        --card: #ffffff;
+        --text: #172033;
+        --muted: #697386;
+        --primary: #3b82f6;
+        --primary-soft: #dbeafe;
+        --green: #10b981;
+        --green-soft: #d1fae5;
+        --orange: #f59e0b;
+        --orange-soft: #fef3c7;
+        --red: #ef4444;
+        --red-soft: #fee2e2;
+        --purple: #8b5cf6;
+        --purple-soft: #ede9fe;
+        --line: #e5e7eb;
+        --shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+        --radius: 22px;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", Arial, sans-serif;
+        background:
+            radial-gradient(circle at 10% 10%, rgba(59, 130, 246, 0.11), transparent 28%),
+            radial-gradient(circle at 90% 0%, rgba(16, 185, 129, 0.10), transparent 30%),
+            var(--bg);
+        color: var(--text);
+    }
+
+    .page {
+        width: min(1440px, calc(100% - 36px));
+        margin: 24px auto 42px;
+    }
+
+    .hero {
+        background: rgba(255, 255, 255, 0.84);
+        border: 1px solid rgba(229, 231, 235, 0.9);
+        border-radius: 28px;
+        box-shadow: var(--shadow);
+        padding: 28px 30px;
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+        align-items: center;
+        backdrop-filter: blur(12px);
+    }
+
+    .hero h1 {
+        margin: 0 0 10px;
+        font-size: clamp(28px, 4vw, 48px);
+        letter-spacing: -1px;
+    }
+
+    .hero p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 17px;
+        line-height: 1.8;
+    }
+
+    .hero .formula {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .pill {
+        padding: 12px 16px;
+        border-radius: 999px;
+        font-weight: 800;
+        font-size: 14px;
+        border: 1px solid var(--line);
+        background: #fff;
+        white-space: nowrap;
+    }
+
+    .pill.blue { color: var(--primary); background: var(--primary-soft); border-color: #bfdbfe; }
+    .pill.green { color: var(--green); background: var(--green-soft); border-color: #a7f3d0; }
+    .pill.orange { color: #b45309; background: var(--orange-soft); border-color: #fde68a; }
+
+    .layout {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 460px;
+        gap: 22px;
+        align-items: start;
+    }
+
+    .card {
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(229, 231, 235, 0.95);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .card-header {
+        padding: 20px 22px 14px;
+        border-bottom: 1px solid var(--line);
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: center;
+    }
+
+    .card-title {
+        font-size: 20px;
+        font-weight: 900;
+    }
+
+    .card-subtitle {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+    }
+
+    .control-panel {
+        padding: 18px 22px 0;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 14px;
+        align-items: center;
+    }
+
+    .input-line {
+        display: flex;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    input {
+        width: 100%;
+        height: 44px;
+        border: 1px solid #d1d5db;
+        border-radius: 14px;
+        padding: 0 14px;
+        font-size: 15px;
+        outline: none;
+        color: var(--text);
+        background: #fff;
+    }
+
+    input:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.12);
+    }
+
+    button {
+        border: 0;
+        cursor: pointer;
+        height: 44px;
+        border-radius: 14px;
+        font-weight: 900;
+        padding: 0 16px;
+        transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        white-space: nowrap;
+    }
+
+    button:active {
+        transform: scale(0.98);
+    }
+
+    .btn-primary {
+        background: var(--primary);
+        color: #fff;
+        box-shadow: 0 12px 22px rgba(59, 130, 246, 0.25);
+    }
+
+    .btn-light {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    .btn-green {
+        background: var(--green);
+        color: #fff;
+        box-shadow: 0 12px 22px rgba(16, 185, 129, 0.22);
+    }
+
+    .btn-red {
+        background: var(--red);
+        color: #fff;
+    }
+
+    .speed {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .speed input {
+        width: 120px;
+        height: auto;
+        accent-color: var(--primary);
+        box-shadow: none;
+    }
+
+    .visual-area {
+        padding: 20px 22px 24px;
+    }
+
+    .status-bar {
+        min-height: 68px;
+        border-radius: 18px;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+        padding: 14px 16px;
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    .status-main {
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.5;
+    }
+
+    .status-detail {
+        color: var(--muted);
+        margin-top: 4px;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .round-badge {
+        width: 54px;
+        height: 54px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        color: var(--primary);
+        background: var(--primary-soft);
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .array-stage {
+        min-height: 370px;
+        border-radius: 22px;
+        background:
+            linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.96));
+        border: 1px solid var(--line);
+        position: relative;
+        padding: 22px 18px 92px;
+        overflow: hidden;
+    }
+
+    .array-labels {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 26px;
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+
+    .legend span {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: #fff;
+        border: 1px solid var(--line);
+    }
+
+    .dot {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 5px;
+        vertical-align: 0;
+    }
+
+    .dot.sorted { background: var(--green); }
+    .dot.current { background: var(--orange); }
+    .dot.mid { background: var(--purple); }
+    .dot.move { background: var(--red); }
+
+    .array {
+        display: flex;
+        gap: 12px;
+        justify-content: center;
+        align-items: flex-end;
+        min-height: 245px;
+        padding: 0 6px;
+        position: relative;
+    }
+
+    .item-wrap {
+        width: clamp(48px, 7vw, 74px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        transition: transform .42s ease, opacity .25s ease;
+    }
+
+    .item {
+        width: 100%;
+        min-height: 74px;
+        border-radius: 18px;
+        background: #fff;
+        border: 2px solid #dbe2ea;
+        display: grid;
+        place-items: center;
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.07);
+        position: relative;
+        transition: all .35s ease;
+    }
+
+    .bar {
+        position: absolute;
+        bottom: 0;
+        left: 8px;
+        right: 8px;
+        border-radius: 12px 12px 0 0;
+        background: linear-gradient(180deg, rgba(59, 130, 246, 0.22), rgba(59, 130, 246, 0.05));
+        z-index: 0;
+        transition: height .45s ease, background .35s ease;
+    }
+
+    .value {
+        position: relative;
+        z-index: 2;
+        font-size: 22px;
+        font-weight: 950;
+        color: var(--text);
+    }
+
+    .index {
+        margin-top: 10px;
+        font-size: 12px;
+        font-weight: 900;
+        color: #94a3b8;
+    }
+
+    .item-wrap.sorted .item {
+        border-color: #86efac;
+        background: var(--green-soft);
+    }
+
+    .item-wrap.sorted .bar {
+        background: linear-gradient(180deg, rgba(16, 185, 129, 0.35), rgba(16, 185, 129, 0.08));
+    }
+
+    .item-wrap.current {
+        transform: translateY(-32px);
+    }
+
+    .item-wrap.current .item {
+        border-color: #fbbf24;
+        background: var(--orange-soft);
+        box-shadow: 0 20px 30px rgba(245, 158, 11, 0.18);
+    }
+
+    .item-wrap.current::before {
+        content: "待插入";
+        position: absolute;
+        top: -34px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: #92400e;
+        background: var(--orange-soft);
+        border: 1px solid #fde68a;
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .item-wrap.mid .item {
+        border-color: #a78bfa;
+        background: var(--purple-soft);
+        box-shadow: 0 18px 30px rgba(139, 92, 246, 0.16);
+    }
+
+    .item-wrap.mid::before {
+        content: "mid";
+        position: absolute;
+        top: -34px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        color: #6d28d9;
+        background: var(--purple-soft);
+        border: 1px solid #ddd6fe;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .item-wrap.move {
+        transform: translateX(calc(clamp(48px, 7vw, 74px) + 12px));
+    }
+
+    .item-wrap.move .item {
+        border-color: #fca5a5;
+        background: var(--red-soft);
+    }
+
+    .pointer-row {
+        position: absolute;
+        left: 18px;
+        right: 18px;
+        bottom: 28px;
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        pointer-events: none;
+    }
+
+    .pointer {
+        width: clamp(48px, 7vw, 74px);
+        text-align: center;
+        font-size: 12px;
+        font-weight: 950;
+        min-height: 42px;
+        color: transparent;
+        transition: color .25s ease;
+    }
+
+    .pointer.active-low,
+    .pointer.active-high,
+    .pointer.active-insert {
+        color: #fff;
+    }
+
+    .pointer span {
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        min-width: 38px;
+        height: 28px;
+        border-radius: 999px;
+        background: transparent;
+        margin-bottom: 4px;
+    }
+
+    .pointer.active-low span { background: var(--primary); }
+    .pointer.active-high span { background: #0f766e; }
+    .pointer.active-insert span { background: var(--red); }
+
+    .pointer.active-low::after,
+    .pointer.active-high::after,
+    .pointer.active-insert::after {
+        content: "";
+        display: block;
+        width: 2px;
+        height: 14px;
+        margin: 0 auto;
+        background: currentColor;
+        opacity: .55;
+    }
+
+    .explain-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+        margin-top: 16px;
+    }
+
+    .explain {
+        border-radius: 18px;
+        padding: 16px;
+        border: 1px solid var(--line);
+        background: #fff;
+    }
+
+    .explain strong {
+        display: block;
+        font-size: 15px;
+        margin-bottom: 7px;
+    }
+
+    .explain p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .code-card {
+        position: sticky;
+        top: 20px;
+    }
+
+    .code-view {
+        margin: 0;
+        padding: 14px 0;
+        overflow: auto;
+        background: #0f172a;
+        color: #dbeafe;
+        font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+        font-size: 13px;
+        line-height: 1.55;
+        max-height: 760px;
+    }
+
+    .code-line {
+        display: grid;
+        grid-template-columns: 42px max-content;
+        align-items: center;
+        min-height: 24px;
+        padding: 0 16px 0 10px;
+        border-radius: 8px;
+        transition: background .25s ease;
+        white-space: pre;
+    }
+
+    .code-line .ln {
+        color: #64748b;
+        text-align: right;
+        padding-right: 12px;
+        user-select: none;
+        border-right: 1px solid rgba(148, 163, 184, 0.22);
+    }
+
+    .code-line .src {
+        padding-left: 12px;
+    }
+
+    .code-line.active {
+        background: rgba(59, 130, 246, 0.28);
+    }
+
+    .code-line.key {
+        background: rgba(245, 158, 11, 0.19);
+    }
+
+    .code-note {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--line);
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.7;
+    }
+
+    .bottom-panel {
+        margin-top: 22px;
+        display: grid;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 22px;
+    }
+
+    .steps {
+        padding: 18px 22px 22px;
+    }
+
+    .step-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .step {
+        display: grid;
+        grid-template-columns: 38px 1fr;
+        gap: 12px;
+        align-items: start;
+        padding: 14px;
+        border-radius: 16px;
+        background: #f8fafc;
+        border: 1px solid var(--line);
+    }
+
+    .num {
+        width: 38px;
+        height: 38px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        font-weight: 950;
+        color: var(--primary);
+        background: var(--primary-soft);
+    }
+
+    .step h3 {
+        margin: 0 0 6px;
+        font-size: 16px;
+    }
+
+    .step p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.65;
+        font-size: 14px;
+    }
+
+    .compare {
+        padding: 18px 22px 22px;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        overflow: hidden;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: #fff;
+    }
+
+    th, td {
+        padding: 13px 14px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        font-size: 14px;
+    }
+
+    th {
+        background: #f8fafc;
+        font-weight: 900;
+    }
+
+    tr:last-child td {
+        border-bottom: 0;
+    }
+
+    td {
+        color: #445064;
+    }
+
+    .tag {
+        display: inline-block;
+        padding: 5px 9px;
+        border-radius: 999px;
+        font-weight: 900;
+        font-size: 12px;
+    }
+
+    .tag.good {
+        color: #047857;
+        background: var(--green-soft);
+    }
+
+    .tag.warn {
+        color: #b45309;
+        background: var(--orange-soft);
+    }
+
+    @media (max-width: 1120px) {
+        .layout,
+        .bottom-panel,
+        .hero {
+            grid-template-columns: 1fr;
+        }
+
+        .hero .formula {
+            justify-content: flex-start;
+        }
+
+        .code-card {
+            position: static;
+        }
+    }
+
+    @media (max-width: 680px) {
+        .page {
+            width: min(100% - 18px, 1440px);
+            margin-top: 10px;
+        }
+
+        .hero {
+            padding: 20px;
+        }
+
+        .control-panel {
+            grid-template-columns: 1fr;
+        }
+
+        .input-line {
+            flex-wrap: wrap;
+        }
+
+        .input-line button {
+            flex: 1;
+        }
+
+        .explain-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .array {
+            gap: 7px;
+        }
+
+        .item-wrap {
+            width: 44px;
+        }
+
+        .value {
+            font-size: 17px;
+        }
+
+        .item {
+            min-height: 66px;
+            border-radius: 15px;
+        }
+    }
+</style>
+</head>
+<body>
+<div class="page">
+    <section class="hero">
+        <div>
+            <h1>折半插入排序可视化</h1>
+            <p>
+                它本质上还是插入排序：前面保持有序，每次拿出一个新元素。
+                改进点是：用折半查找快速确定插入位置，然后再统一后移元素。
+            </p>
+        </div>
+        <div class="formula">
+            <span class="pill blue">折半查找插入位置</span>
+            <span class="pill green">有序区不断扩大</span>
+            <span class="pill orange">移动次数仍为 O(n²)</span>
+        </div>
+    </section>
+
+    <main class="layout">
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">动态演示区</div>
+                    <div class="card-subtitle">观察 low、high、mid 如何缩小范围，以及元素如何后移。</div>
+                </div>
+            </div>
+
+            <div class="control-panel">
+                <div class="input-line">
+                    <input id="arrayInput" value="49,38,65,97,76,13,27" aria-label="数组输入" />
+                    <button class="btn-light" id="randomBtn">随机数组</button>
+                    <button class="btn-primary" id="buildBtn">生成</button>
+                </div>
+                <div class="input-line">
+                    <button class="btn-green" id="playBtn">开始演示</button>
+                    <button class="btn-light" id="stepBtn">单步执行</button>
+                    <button class="btn-red" id="resetBtn">重置</button>
+                </div>
+            </div>
+
+            <div class="control-panel" style="padding-top:14px;">
+                <div class="speed">
+                    动画速度
+                    <input type="range" id="speedRange" min="250" max="1300" value="760" />
+                    <span id="speedText">760ms</span>
+                </div>
+            </div>
+
+            <div class="visual-area">
+                <div class="status-bar">
+                    <div>
+                        <div class="status-main" id="statusMain">点击“开始演示”，从第 2 个元素开始插入。</div>
+                        <div class="status-detail" id="statusDetail">绿色代表已经有序，黄色代表当前待插入元素，紫色代表 mid。</div>
+                    </div>
+                    <div class="round-badge" id="roundBadge">0</div>
+                </div>
+
+                <div class="array-stage">
+                    <div class="array-labels">
+                        <span>数组可视化</span>
+                        <div class="legend">
+                            <span><i class="dot sorted"></i>有序区</span>
+                            <span><i class="dot current"></i>待插入</span>
+                            <span><i class="dot mid"></i>mid</span>
+                            <span><i class="dot move"></i>后移</span>
+                        </div>
+                    </div>
+                    <div id="array" class="array"></div>
+                    <div id="pointerRow" class="pointer-row"></div>
+                </div>
+
+                <div class="explain-grid">
+                    <div class="explain">
+                        <strong>1. 前半部分有序</strong>
+                        <p>第 i 趟时，arr[0] 到 arr[i-1] 已经排好序。</p>
+                    </div>
+                    <div class="explain">
+                        <strong>2. 折半找位置</strong>
+                        <p>比较 temp 和 arr[mid]，不断缩小 low 与 high 的范围。</p>
+                    </div>
+                    <div class="explain">
+                        <strong>3. 后移再插入</strong>
+                        <p>查找结束后，low 就是插入位置，再把后面的元素整体右移。</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <aside class="card code-card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">C 语言代码</div>
+                    <div class="card-subtitle">精简版代码：去掉多余换行和单语句大括号。</div>
+                </div>
+            </div>
+            <div class="code-note">
+                动画执行到关键步骤时，右侧代码会自动高亮对应行。
+            </div>
+<div class="code-view" id="codeBlock">
+<div class="code-line" data-line="1"><span class="ln">1</span><span class="src">void BinaryInsertSort(int *arr, int length) {</span></div>
+<div class="code-line" data-line="2"><span class="ln">2</span><span class="src">    if (arr == NULL || length &lt;= 1) return;</span></div>
+<div class="code-line" data-line="3"><span class="ln">3</span><span class="src">    for (int i = 1; i &lt; length; i++) {</span></div>
+<div class="code-line" data-line="4"><span class="ln">4</span><span class="src">        int temp = arr[i];</span></div>
+<div class="code-line" data-line="5"><span class="ln">5</span><span class="src">        int low = 0, high = i - 1;</span></div>
+<div class="code-line" data-line="6"><span class="ln">6</span><span class="src">        while (low &lt;= high) {</span></div>
+<div class="code-line" data-line="7"><span class="ln">7</span><span class="src">            int mid = (low + high) / 2;</span></div>
+<div class="code-line" data-line="8"><span class="ln">8</span><span class="src">            if (temp &lt; arr[mid])</span></div>
+<div class="code-line" data-line="9"><span class="ln">9</span><span class="src">                high = mid - 1;</span></div>
+<div class="code-line" data-line="10"><span class="ln">10</span><span class="src">            else</span></div>
+<div class="code-line" data-line="11"><span class="ln">11</span><span class="src">                low = mid + 1;</span></div>
+<div class="code-line" data-line="12"><span class="ln">12</span><span class="src">        }</span></div>
+<div class="code-line" data-line="13"><span class="ln">13</span><span class="src">        for (int j = i - 1; j &gt;= low; j--)</span></div>
+<div class="code-line" data-line="14"><span class="ln">14</span><span class="src">            arr[j + 1] = arr[j];</span></div>
+<div class="code-line" data-line="15"><span class="ln">15</span><span class="src">        arr[low] = temp;</span></div>
+<div class="code-line" data-line="16"><span class="ln">16</span><span class="src">    }</span></div>
+<div class="code-line" data-line="17"><span class="ln">17</span><span class="src">}</span></div>
+</div>
+        </aside>
+    </main>
+
+    <section class="bottom-panel">
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">过程理解</div>
+                    <div class="card-subtitle">折半插入排序每一趟都分为三个阶段。</div>
+                </div>
+            </div>
+            <div class="steps">
+                <div class="step-list">
+                    <div class="step">
+                        <div class="num">1</div>
+                        <div>
+                            <h3>取出待插入元素 temp</h3>
+                            <p>从下标 1 开始，因为单个元素天然有序。每次将 arr[i] 暂存为 temp。</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="num">2</div>
+                        <div>
+                            <h3>在有序区中折半查找</h3>
+                            <p>设置 low = 0，high = i - 1。若 temp 小于 arr[mid]，说明位置在左边；否则在右边。</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="num">3</div>
+                        <div>
+                            <h3>移动元素并插入</h3>
+                            <p>循环结束后 low 就是插入位置，把 low 到 i - 1 的元素向右移动一位，再把 temp 放到 arr[low]。</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <div class="card-title">和直接插入排序对比</div>
+                    <div class="card-subtitle">折半插入排序减少的是比较次数，不是移动次数。</div>
+                </div>
+            </div>
+            <div class="compare">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>项目</th>
+                            <th>直接插入排序</th>
+                            <th>折半插入排序</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>找位置</td>
+                            <td>顺序比较</td>
+                            <td><span class="tag good">折半查找</span></td>
+                        </tr>
+                        <tr>
+                            <td>比较次数</td>
+                            <td>较多</td>
+                            <td><span class="tag good">较少</span></td>
+                        </tr>
+                        <tr>
+                            <td>移动次数</td>
+                            <td>可能很多</td>
+                            <td><span class="tag warn">没有减少</span></td>
+                        </tr>
+                        <tr>
+                            <td>时间复杂度</td>
+                            <td>O(n²)</td>
+                            <td>O(n²)</td>
+                        </tr>
+                        <tr>
+                            <td>稳定性</td>
+                            <td>稳定</td>
+                            <td>稳定</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<script>
+const arrayEl = document.getElementById("array");
+const pointerRowEl = document.getElementById("pointerRow");
+const statusMain = document.getElementById("statusMain");
+const statusDetail = document.getElementById("statusDetail");
+const roundBadge = document.getElementById("roundBadge");
+const arrayInput = document.getElementById("arrayInput");
+const buildBtn = document.getElementById("buildBtn");
+const randomBtn = document.getElementById("randomBtn");
+const playBtn = document.getElementById("playBtn");
+const stepBtn = document.getElementById("stepBtn");
+const resetBtn = document.getElementById("resetBtn");
+const speedRange = document.getElementById("speedRange");
+const speedText = document.getElementById("speedText");
+
+let original = [49, 38, 65, 97, 76, 13, 27];
+let arr = [...original];
+let steps = [];
+let stepIndex = 0;
+let timer = null;
+
+function parseInput() {
+    const nums = arrayInput.value
+        .split(/[,，\s]+/)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .map(Number)
+        .filter(x => Number.isFinite(x));
+
+    if (nums.length < 2) {
+        alert("请输入至少 2 个数字，例如：49,38,65,97,76,13,27");
+        return null;
+    }
+
+    if (nums.length > 10) {
+        alert("为了动画清晰，最多输入 10 个数字。");
+        return null;
+    }
+
+    return nums;
+}
+
+function generateSteps(source) {
+    const a = [...source];
+    const s = [];
+
+    s.push({
+        arr: [...a],
+        i: 0,
+        sortedEnd: 0,
+        phase: "init",
+        main: "初始化：第 1 个元素默认有序",
+        detail: "折半插入排序从下标 1 开始处理。",
+        line: [1, 2, 3]
+    });
+
+    for (let i = 1; i < a.length; i++) {
+        let temp = a[i];
+        let low = 0;
+        let high = i - 1;
+
+        s.push({
+            arr: [...a],
+            i,
+            sortedEnd: i - 1,
+            current: i,
+            low,
+            high,
+            temp,
+            phase: "take",
+            main: `第 ${i} 趟：取出待插入元素 temp = ${temp}`,
+            detail: `当前有序区是下标 0 到 ${i - 1}，接下来在这个范围内折半查找插入位置。`,
+            line: [3, 4, 5]
+        });
+
+        while (low <= high) {
+            const mid = Math.floor((low + high) / 2);
+
+            s.push({
+                arr: [...a],
+                i,
+                sortedEnd: i - 1,
+                current: i,
+                low,
+                high,
+                mid,
+                temp,
+                phase: "compare",
+                main: `比较：temp = ${temp} 与 arr[mid] = arr[${mid}] = ${a[mid]}`,
+                detail: `low = ${low}，high = ${high}，mid = ${mid}。`,
+                line: [6, 7, 8]
+            });
+
+            if (temp < a[mid]) {
+                high = mid - 1;
+                s.push({
+                    arr: [...a],
+                    i,
+                    sortedEnd: i - 1,
+                    current: i,
+                    low,
+                    high,
+                    mid,
+                    temp,
+                    phase: "left",
+                    main: `${temp} < ${a[mid]}，插入位置在左半区`,
+                    detail: `更新 high = mid - 1 = ${high}。`,
+                    line: [8, 9]
+                });
+            } else {
+                low = mid + 1;
+                s.push({
+                    arr: [...a],
+                    i,
+                    sortedEnd: i - 1,
+                    current: i,
+                    low,
+                    high,
+                    mid,
+                    temp,
+                    phase: "right",
+                    main: `${temp} >= ${a[mid]}，插入位置在右半区`,
+                    detail: `更新 low = mid + 1 = ${low}。相等时放到右边，可以保持稳定性。`,
+                    line: [10, 11]
+                });
+            }
+        }
+
+        s.push({
+            arr: [...a],
+            i,
+            sortedEnd: i - 1,
+            current: i,
+            insert: low,
+            temp,
+            phase: "found",
+            main: `查找结束：插入位置是下标 ${low}`,
+            detail: `此时 low > high，low 就是 temp 应该放入的位置。`,
+            line: [12, 13]
+        });
+
+        const moving = [];
+        for (let j = i - 1; j >= low; j--) {
+            moving.push(j);
+            s.push({
+                arr: [...a],
+                i,
+                sortedEnd: i - 1,
+                current: i,
+                insert: low,
+                moving: [...moving],
+                temp,
+                phase: "move",
+                main: `后移：arr[${j}] 右移到 arr[${j + 1}]`,
+                detail: `为了给 temp 腾出下标 ${low} 的位置，需要把元素依次向右移动。`,
+                line: [13, 14]
+            });
+            a[j + 1] = a[j];
+        }
+
+        a[low] = temp;
+
+        s.push({
+            arr: [...a],
+            i,
+            sortedEnd: i,
+            insert: low,
+            temp,
+            phase: "insert",
+            main: `插入完成：把 temp = ${temp} 放入 arr[${low}]`,
+            detail: `现在下标 0 到 ${i} 的元素已经有序。`,
+            line: [15]
+        });
+    }
+
+    s.push({
+        arr: [...a],
+        i: a.length - 1,
+        sortedEnd: a.length - 1,
+        phase: "done",
+        main: "排序完成",
+        detail: `最终结果：${a.join(", ")}`,
+        line: [17]
+    });
+
+    return s;
+}
+
+function renderArray(state) {
+    const max = Math.max(...state.arr.map(Math.abs), 1);
+    arrayEl.innerHTML = "";
+    pointerRowEl.innerHTML = "";
+
+    state.arr.forEach((value, idx) => {
+        const wrap = document.createElement("div");
+        wrap.className = "item-wrap";
+
+        if (idx <= (state.sortedEnd ?? 0)) wrap.classList.add("sorted");
+        if (idx === state.current) wrap.classList.add("current");
+        if (idx === state.mid) wrap.classList.add("mid");
+        if (state.moving && state.moving.includes(idx)) wrap.classList.add("move");
+        if (idx === state.insert && state.phase === "insert") wrap.classList.add("mid");
+
+        /*
+           关键修复：
+           元素后移时，arr[i] 这个原位置会被前面的元素覆盖，
+           但待插入元素已经暂存在 temp 中，视觉上应该一直显示 temp。
+           所以在“查找/后移”阶段，current 位置显示 state.temp，而不是 state.arr[current]。
+        */
+        const tempVisiblePhases = ["take", "compare", "left", "right", "found", "move"];
+        const displayValue =
+            idx === state.current &&
+            state.temp !== undefined &&
+            tempVisiblePhases.includes(state.phase)
+                ? state.temp
+                : value;
+
+        const item = document.createElement("div");
+        item.className = "item";
+
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        const h = 22 + (Math.abs(displayValue) / max) * 72;
+        bar.style.height = `${h}%`;
+
+        const val = document.createElement("div");
+        val.className = "value";
+        val.textContent = displayValue;
+
+        item.appendChild(bar);
+        item.appendChild(val);
+
+        const index = document.createElement("div");
+        index.className = "index";
+        index.textContent = idx;
+
+        wrap.appendChild(item);
+        wrap.appendChild(index);
+        arrayEl.appendChild(wrap);
+
+        const pointer = document.createElement("div");
+        pointer.className = "pointer";
+
+        let label = "";
+        if (idx === state.low) {
+            label += "low";
+            pointer.classList.add("active-low");
+        }
+        if (idx === state.high) {
+            label += label ? "/high" : "high";
+            pointer.classList.add("active-high");
+        }
+        if (idx === state.insert && (state.phase === "found" || state.phase === "move" || state.phase === "insert")) {
+            label += label ? "/插入" : "插入";
+            pointer.classList.add("active-insert");
+        }
+
+        pointer.innerHTML = label ? `<span>${label}</span>` : `<span></span>`;
+        pointerRowEl.appendChild(pointer);
+    });
+}
+
+function highlightCode(lines = []) {
+    document.querySelectorAll(".code-line").forEach(line => {
+        const n = Number(line.dataset.line);
+        line.classList.toggle("active", lines.includes(n));
+        line.classList.toggle("key", lines.includes(4) && n === 4);
+    });
+}
+
+function renderStep() {
+    const state = steps[stepIndex];
+    if (!state) return;
+
+    renderArray(state);
+    highlightCode(state.line || []);
+    statusMain.textContent = state.main;
+    statusDetail.textContent = state.detail;
+    roundBadge.textContent = state.phase === "done" ? "✓" : state.i ?? 0;
+}
+
+function nextStep() {
+    if (stepIndex < steps.length - 1) {
+        stepIndex++;
+        renderStep();
+    } else {
+        stopPlay();
+    }
+}
+
+function startPlay() {
+    stopPlay();
+    playBtn.textContent = "暂停";
+    timer = setInterval(nextStep, Number(speedRange.value));
+}
+
+function stopPlay() {
+    if (timer) {
+        clearInterval(timer);
+        timer = null;
+    }
+    playBtn.textContent = "开始演示";
+}
+
+function resetAll() {
+    stopPlay();
+    stepIndex = 0;
+    arr = [...original];
+    steps = generateSteps(arr);
+    renderStep();
+}
+
+function rebuild() {
+    const nums = parseInput();
+    if (!nums) return;
+    original = nums;
+    resetAll();
+}
+
+function randomArray() {
+    const len = 7;
+    const nums = [];
+    while (nums.length < len) {
+        const n = Math.floor(Math.random() * 90) + 10;
+        if (!nums.includes(n)) nums.push(n);
+    }
+    arrayInput.value = nums.join(",");
+    rebuild();
+}
+
+buildBtn.addEventListener("click", rebuild);
+randomBtn.addEventListener("click", randomArray);
+
+playBtn.addEventListener("click", () => {
+    if (timer) {
+        stopPlay();
+    } else {
+        if (stepIndex >= steps.length - 1) {
+            stepIndex = 0;
+            renderStep();
+        }
+        startPlay();
+    }
+});
+
+stepBtn.addEventListener("click", () => {
+    stopPlay();
+    nextStep();
+});
+
+resetBtn.addEventListener("click", resetAll);
+
+speedRange.addEventListener("input", () => {
+    speedText.textContent = `${speedRange.value}ms`;
+    if (timer) startPlay();
+});
+
+resetAll();
+</script>
+</body>
+</html>
